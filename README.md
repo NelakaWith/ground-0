@@ -1,5 +1,7 @@
 # Project Plan: Ground-0 (V1 MVP)
 
+🚨 initial data aggregation testing in progress 🚨
+
 ## 1. Project Goal
 
 Build an automated pipeline that monitors Sri Lankan news via RSS feeds and uses Gemini 1.5 Flash to analyze the political framing and bias of news snippets (Headlines + Summaries).
