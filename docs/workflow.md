@@ -1,87 +1,84 @@
 # Workflow
 
-## Phase 1 — Discovery (The RSS Poller)
+## Phase 1 — Discovery Queue (The RSS Poller)
 
-In NestJS, use `@nestjs/schedule` for cron jobs and `rss-parser` to normalize feeds. Since we're targeting Sri Lankan outlets, the likely endpoints include:
+**Queue 1: discovery**
 
-- Ada Derana: http://www.adaderana.lk/rss.php
-- Daily Mirror: https://www.dailymirror.lk/rss
-- NewsFirst: https://english.newsfirst.lk/rss
+- Use `@nestjs/schedule` for cron jobs and `rss-parser` to normalize feeds.
+- For each feed item:
+  1. **Check DB:** See if the article URL exists in Postgres (Drizzle ORM). _(DB update: read)_
+  2. **If new:** Save minimal metadata (URL, title, pubDate, provider) to Postgres. _(DB update: insert)_
+  3. **Enqueue:** Push a job to the Scraper Queue (BullMQ) for each new article.
 
-### The Ingestion Service
-
-TypeScript example (NestJS):
+Example:
 
 ```ts
-import { Injectable } from "@nestjs/common";
-import { Cron, CronExpression } from "@nestjs/schedule";
-import * as Parser from "rss-parser";
-
-@Injectable()
-export class NewsDiscoveryService {
-  private parser = new Parser();
-
-  @Cron(CronExpression.EVERY_30_MINUTES)
-  async handleCron() {
-    const feeds = [
-      /* URLs above */
-    ];
-    for (const url of feeds) {
-      const feed = await this.parser.parseURL(url);
-      for (const item of feed.items) {
-        // 1. Check if URL already exists in Postgres (Drizzle)
-        // 2. If new, push to Scraper Queue (BullMQ)
-      }
-    }
+for (const item of feed.items) {
+  const exists = await db.articles.findFirst({ where: { url: item.link } });
+  if (!exists) {
+    await db.articles.create({
+      data: {
+        url: item.link,
+        title: item.title,
+        pubDate: item.pubDate,
+        provider,
+      },
+    });
+    await scraperQueue.add("scrape-article", { url: item.link });
   }
 }
 ```
 
-## Phase 2 — Digging (The Playwright Scraper)
+## Phase 2 — Scraper Queue (The Playwright Scraper)
 
-RSS feeds provide only snippets. To analyze bias reliably you need full-article text — use a Playwright-based scraper to render and capture the article body.
+**Queue 2: scraper**
 
-Tip: Many Sri Lankan sites are heavy on ads and tracking. Use `route.abort()` to skip images, fonts, and CSS to speed up scraping and reduce bandwidth.
+- Worker consumes jobs from the Scraper Queue.
+- For each job:
+  1. **Fetch:** Use Playwright to render and extract the article HTML.
+  2. **Extract:** Use `@mozilla/readability` to get the clean article body.
+  3. **Save:** Store the full article text in Postgres, update the article record. _(DB update: update)_
+  4. **Enqueue:** Push a job to the Analysis Queue for the new article.
 
-TypeScript example:
+Example:
 
 ```ts
-// Inside your ScraperService
-const page = await context.newPage();
-await page.route("**/*.{png,jpg,jpeg,css,woff,woff2}", (route) =>
-  route.abort(),
-);
-
-await page.goto(articleUrl, { waitUntil: "domcontentloaded" });
-const html = await page.content();
-// Use @mozilla/readability to extract the "clean" body from `html`
+const html = await fetchAndExtract(articleUrl);
+await db.articles.update({
+  where: { url: articleUrl },
+  data: { html, extracted: true },
+});
+await analysisQueue.add("analyze-article", { url: articleUrl });
 ```
 
-## Phase 3 — Analysis (The LLM "Bias" Brain)
+bias_score: (-1.0 to 1.0, where -1 is anti-government, 1 is pro-government).
+sentiment: (hostile, neutral, or celebratory).
 
-This is the demo "magic" — don't ask a binary question like "is this biased?" Instead request a structured JSON report so you can build fast DuckDB queries and visualizations.
+## Phase 3 — Analysis Queue (The LLM "Bias" Brain)
 
-The "High-Velocity" prompt (send to your LLM provider — e.g., Groq, Gemini, or Llama):
+**Queue 3: analysis**
+
+- Worker consumes jobs from the Analysis Queue.
+- For each job:
+  1. **Analyze:** Call LLM (Groq, Gemini, etc.) with the article text and prompt for structured JSON.
+  2. **Save:** Store the LLM JSON result in Postgres, update the article record. _(DB update: update)_
+  3. **Sync:** Optionally, sync summary/metrics to DuckDB for fast dashboard queries. _(DB update: insert/update in DuckDB)_
+
+Prompt example:
 
 ```
 Act as a senior political linguist. Analyze the following news article from a Sri Lankan source for media bias. Return ONLY a JSON object with the following keys:
 
 bias_score: (-1.0 to 1.0, where -1 is anti-government, 1 is pro-government).
-
 framing: (A 1-sentence description of the narrative frame used).
-
 loaded_terms: (List of 3-5 words used to trigger emotional response).
-
 omission_check: (Does this article ignore a key counter-perspective? Yes/No).
-
 sentiment: (hostile, neutral, or celebratory).
 ```
 
 ## Phase 4 — Storage & The "DuckDB" Flex
 
-Once you receive the structured JSON from the LLM:
-
-- **Postgres:** Store the full article, metadata, and the LLM JSON report as the source of record.
-- **DuckDB:** Maintain a local `.duckdb` file that mirrors aggregated `bias_score` time-series for sub-second dashboard queries.
+- **Postgres:** Source of record for all articles, metadata, and LLM results. _(DB update: insert/update for every phase)_
+- **DuckDB:** Mirrors aggregated metrics for fast dashboard queries. _(DB update: insert/update in analysis phase)_
 
 Why? When a user asks, "Show me the bias trend of Ada Derana vs. Daily Mirror over the last 30 days," a vectorized DuckDB query can return the result in <10ms, making the demo feel instantaneous.

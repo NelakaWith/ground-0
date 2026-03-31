@@ -4,13 +4,20 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 
 ### **Phase 1: The Robust Ingestion Engine (The "Hustle")**
 
-- [ ] **Goal:** Establish a 100% reliable, de-duplicated data stream from Sri Lankan media.
+- [ ] **Goal:** Establish a 100% reliable, de-duplicated data stream from Sri Lankan media using a stepped queue pipeline.
 
 - [x] **Infrastructure:** \* `undici` (HTTP client) with Chrome/120 headers; fallback to `playwright` (Chromium) for JS-heavy pages and challenge solving.
 
-- [x] **Orchestrator / API:** `NestJS` (apps/api) using `@nestjs/schedule` for cron-driven discovery and `bullmq` + `redis` for durable scrape queues; expose management endpoints (`/providers`, `/fetch`, `/jobs`).
+- [x] **Orchestrator / API:** `NestJS` (apps/api) using `@nestjs/schedule` for cron-driven discovery and **multi-stage BullMQ queues**:
+  - **Queue 1 (discovery):** Finds new links, saves to Postgres, enqueues scraper jobs.
+  - **Queue 2 (scraper):** Runs Playwright, saves text to Postgres, enqueues analysis jobs.
+  - **Queue 3 (analysis):** Calls LLM, saves final data to Postgres and DuckDB.
   - [x] `rss-parser`: Standardize RSS/Atom feeds.
   - [ ] **Logic:** Implement **"Near-Duplicate Detection"** using fuzzy string libraries (`string-similarity` / `fast-fuzzy`) or embedding similarity (85% threshold) with `pgvector` to flag the same "Event Cluster" immediately.
+- [ ] **DB Update Points:**
+  - Discovery: Insert new article metadata.
+  - Scraper: Update article with full text.
+  - Analysis: Update article with LLM results; sync metrics to DuckDB.
 - [ ] **YC Angle:** This shows "resourcefulness.” You aren't just using a standard library; you're actively overcoming local technical hurdles (WAFs/Cloudflare).
 
 ### **Phase 2: The Intelligence Hybrid (The "Brain")**
