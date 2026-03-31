@@ -1,19 +1,21 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-// Use require for rss-parser to avoid ESM/CJS issues
-
-const Parser = require('rss-parser');
+import type ParserType from 'rss-parser';
+import * as ParserNS from 'rss-parser';
 import providers from '../feed/providers';
 import type { Queue } from 'bullmq';
 
 @Injectable()
 export class NewsDiscoveryService {
-  private readonly parser: InstanceType<typeof Parser>;
+  private readonly parser: InstanceType<typeof ParserNS>;
+  private readonly logger = new Logger(NewsDiscoveryService.name);
 
   constructor(@Inject('SCRAPE_QUEUE') private readonly scrapeQueue: Queue) {
-    this.parser = new Parser();
+    // Use the correct constructor signature for rss-parser
+    // ParserNS is the module namespace, so ParserNS.default or just ParserNS
+    // but in CJS, the constructor is the module itself
+    this.parser = new (ParserNS as unknown as { new (): ParserType })();
   }
-  private readonly logger = new Logger(NewsDiscoveryService.name);
 
   @Cron(CronExpression.EVERY_30_MINUTES)
   async handleCron() {
