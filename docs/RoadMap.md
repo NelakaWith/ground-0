@@ -6,7 +6,9 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 
 - [ ] **Goal:** Establish a 100% reliable, de-duplicated data stream from Sri Lankan media.
 
-- [ ] **Infrastructure:** \* `undici` (HTTP client) with Chrome/120 headers; fallback to `playwright` (Chromium) for JS-heavy pages and challenge solving.
+-- [ ] **Infrastructure:** \* `undici` (HTTP client) with Chrome/120 headers; fallback to `playwright` (Chromium) for JS-heavy pages and challenge solving.
+
+- [ ] **Orchestrator / API:** `NestJS` (apps/api) using `@nestjs/schedule` for cron-driven discovery and `bullmq` + `redis` for durable scrape queues; expose management endpoints (`/providers`, `/fetch`, `/jobs`).
   - [ ] `rss-parser`: Standardize RSS/Atom feeds.
   - [ ] **Logic:** Implement **"Near-Duplicate Detection"** using fuzzy string libraries (`string-similarity` / `fast-fuzzy`) or embedding similarity (85% threshold) with `pgvector` to flag the same "Event Cluster" immediately.
 - [ ] **YC Angle:** This shows "resourcefulness.” You aren't just using a standard library; you're actively overcoming local technical hurdles (WAFs/Cloudflare).
@@ -22,6 +24,8 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
   - [ ] _State Media:_ "The necessary economic adjustment..."
   - [ ] _Private Media:_ "The crippling tax hike..."
 - [ ] **YC Angle:** This demonstrates "technical depth.” You aren't just "wrapping an API"; you're building a multi-stage pipeline that combines LLM reasoning with deterministic NLP where needed.
+
+- [ ] **Scraper details:** Use a Playwright `ScraperService` (worker) that consumes jobs from `bullmq`, renders pages with `route.abort()` for non-HTML assets, extracts HTML, runs `@mozilla/readability` for the article body, then forwards content to the Analysis service.
 
 ### **Phase 3: The "Delta" Dashboard (The "Showcase")**
 
@@ -52,9 +56,15 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 | **Clustering**      | `string-similarity`, `fast-fuzzy`, `fuse.js`, `pgvector` | Grouping headlines into "Event Clusters" via fuzzy or embedding similarity. |
 | **Analytics**       | `DuckDB`, `danfojs-node`                                 | High-speed data manipulation and OLAP.                                      |
 | **UI**              | `Next.js`, `react-plotly.js`                             | Building the "Heatmap of Bias" dashboard.                                   |
+| **Orchestration**   | `NestJS`, `@nestjs/schedule`, `bullmq`, `redis`          | Scheduler, API, and durable job queues.                                     |
+| **DB / ORM**        | `pg`, `pgvector`, `drizzle-orm`                          | Postgres with vector extension and lightweight ORM.                         |
+| **Scraping**        | `playwright`, `undici`, `rss-parser`                     | Rendering fallback, fast HTTP fetches, and feed parsing.                    |
 
 ### **Immediate 48-Hour Sprint**
 
 - [ ] Run the TypeScript `bias_checker_core` script (e.g., `pnpm run start` or `ts-node src/bias_checker_core.ts`) — or run the existing `bias_checker_core.py` if not yet ported.
 - [ ] Gather data from 3 "state” and 3 "private” sources for the same major political headline.
 - [ ] Manually trigger the adjective extraction prompt via `groq` to see if the "Delta" is visible. If it is, you have your **"Quantum of Utility"** for the application.
+
+- [ ] Start the Nest API (apps/api) in dev mode and verify `GET /providers` returns the canonical list.
+- [ ] Enqueue a single scrape job or call `/fetch?source=<id>` to validate the ScraperService and Readability extraction.
