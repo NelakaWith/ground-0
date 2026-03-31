@@ -6,10 +6,10 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 
 - [ ] **Goal:** Establish a 100% reliable, de-duplicated data stream from Sri Lankan media.
 
--- [ ] **Infrastructure:** \* `undici` (HTTP client) with Chrome/120 headers; fallback to `playwright` (Chromium) for JS-heavy pages and challenge solving.
+- [x] **Infrastructure:** \* `undici` (HTTP client) with Chrome/120 headers; fallback to `playwright` (Chromium) for JS-heavy pages and challenge solving.
 
-- [ ] **Orchestrator / API:** `NestJS` (apps/api) using `@nestjs/schedule` for cron-driven discovery and `bullmq` + `redis` for durable scrape queues; expose management endpoints (`/providers`, `/fetch`, `/jobs`).
-  - [ ] `rss-parser`: Standardize RSS/Atom feeds.
+- [x] **Orchestrator / API:** `NestJS` (apps/api) using `@nestjs/schedule` for cron-driven discovery and `bullmq` + `redis` for durable scrape queues; expose management endpoints (`/providers`, `/fetch`, `/jobs`).
+  - [x] `rss-parser`: Standardize RSS/Atom feeds.
   - [ ] **Logic:** Implement **"Near-Duplicate Detection"** using fuzzy string libraries (`string-similarity` / `fast-fuzzy`) or embedding similarity (85% threshold) with `pgvector` to flag the same "Event Cluster" immediately.
 - [ ] **YC Angle:** This shows "resourcefulness.” You aren't just using a standard library; you're actively overcoming local technical hurdles (WAFs/Cloudflare).
 
@@ -66,5 +66,5 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 - [ ] Gather data from 3 "state” and 3 "private” sources for the same major political headline.
 - [ ] Manually trigger the adjective extraction prompt via `groq` to see if the "Delta" is visible. If it is, you have your **"Quantum of Utility"** for the application.
 
-- [ ] Start the Nest API (apps/api) in dev mode and verify `GET /providers` returns the canonical list.
+- [x] Start the Nest API (apps/api) in dev mode and verify `GET /providers` returns the canonical list.
 - [ ] Enqueue a single scrape job or call `/fetch?source=<id>` to validate the ScraperService and Readability extraction.
