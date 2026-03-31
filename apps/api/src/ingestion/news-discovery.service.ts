@@ -22,7 +22,7 @@ export class NewsDiscoveryService {
     this.logger.log('Running scheduled discovery');
     for (const p of providers) {
       try {
-        const feed = await this.parser.parseURL(p.rss_url);
+        const feed = await this.tryParseFeed(p.rss_url);
         const count = (feed.items && feed.items.length) || 0;
         this.logger.log(`Fetched ${p.name} — ${count} items`);
 
@@ -55,6 +55,35 @@ export class NewsDiscoveryService {
         const msg = err instanceof Error ? err.message : String(err);
         this.logger.error(`Failed to fetch ${p.rss_url}: ${msg}`);
       }
+    }
+  }
+
+  /**
+   * Try to parse a feed, retrying with browser headers if 403 is encountered.
+   */
+  private async tryParseFeed(
+    url: string,
+  ): Promise<Awaited<ReturnType<InstanceType<typeof ParserNS>['parseURL']>>> {
+    try {
+      return await this.parser.parseURL(url);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('403')) {
+        this.logger.warn(`403 for ${url}, retrying with browser headers`);
+        // Create a new parser with browser headers
+        const browserParser = new (ParserNS as unknown as {
+          new (opts?: any): ParserType;
+        })({
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            Accept:
+              'application/rss+xml,application/xml,text/xml;q=0.9,*/*;q=0.8',
+          },
+        });
+        return await browserParser.parseURL(url);
+      }
+      throw err;
     }
   }
 }
