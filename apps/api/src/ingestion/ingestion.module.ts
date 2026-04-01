@@ -3,6 +3,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { NewsDiscoveryService } from './news-discovery.service';
+import { ScraperService } from './scraper.service';
+import { ScraperProcessor } from './scraper.processor';
 import { Queue } from 'bullmq';
 import type { RedisOptions } from 'ioredis';
 
@@ -18,10 +20,21 @@ import type { RedisOptions } from 'ioredis';
      * Register the BullModule with a 'scrape' queue definition.
      * This allows the module to manage and inject the 'scrape' queue using NestJS patterns.
      */
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          host: configService.get<string>('REDIS_HOST') ?? '127.0.0.1',
+          port: configService.get<number>('REDIS_PORT') ?? 6379,
+        },
+      }),
+    }),
     BullModule.registerQueue({ name: 'scrape' }),
   ],
   providers: [
     NewsDiscoveryService,
+    ScraperService,
+    ScraperProcessor,
     {
       /**
        * 'SCRAPE_QUEUE' Provider:

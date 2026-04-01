@@ -24,6 +24,11 @@ export const articles = pgTable('articles', {
   sentiment: text('sentiment'),
   summary: text('summary'),
 
+  // Flags for content quality and paywalls
+  isPaywalled: text('is_paywalled').default('false'), // or boolean if supported
+  isSnippet: text('is_snippet').default('false'),
+  processingStatus: text('processing_status').default('discovered'), // discovered, scraped, analyzed, failed
+
   // Semantic Search / Near-Duplicate Detection
   // pgvector extension must be enabled in Postgres
   embedding: vector('embedding', { dimensions: 1536 }), // OpenAI/Groq standard dimensions

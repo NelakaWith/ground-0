@@ -11,14 +11,14 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 - [x] **Orchestrator / API:** `NestJS` (apps/api) using `@nestjs/schedule` for cron-driven discovery and **multi-stage BullMQ queues**:
   - **Queue 1 (discovery):** Finds new links, saves to Postgres, enqueues scraper jobs.
   - **Queue 2 (scraper):** Runs Playwright, saves text to Postgres, enqueues analysis jobs.
-  - **Queue 3 (analysis):** Calls LLM, saves final data to Postgres and DuckDB.
+  - **Queue 3 (analysis):** Calls LLM, saves final data to Postgres (including embeddings with `pgvector`).
   - [x] `rss-parser`: Standardize RSS/Atom feeds.
   - [x] **Logic:** Implement **"Near-Duplicate Detection"** using fuzzy string libraries (`string-similarity` / `fast-fuzzy`) or embedding similarity (85% threshold) with `pgvector` to flag the same "Event Cluster" immediately.
-- [ ] **DB Update Points:**
+- [x] **DB Update Points:**
   - [x] Setting up Drizzle ORM and Article Schema.
   - [x] Discovery: Insert new article metadata (checks for existing URLs).
-  - [ ] Scraper: Update article with full text.
-  - Analysis: Update article with LLM results; sync metrics to DuckDB.
+  - [x] Scraper: Update article with full text.
+  - Analysis: Update article with LLM results; sync embeddings to `pgvector`.
 - [ ] **YC Angle:** This shows "resourcefulness.” You aren't just using a standard library; you're actively overcoming local technical hurdles (WAFs/Cloudflare).
 
 ### **Phase 2: The Intelligence Hybrid (The "Brain")**
@@ -33,7 +33,10 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
   - [ ] _Private Media:_ "The crippling tax hike..."
 - [ ] **YC Angle:** This demonstrates "technical depth.” You aren't just "wrapping an API"; you're building a multi-stage pipeline that combines LLM reasoning with deterministic NLP where needed.
 
-- [ ] **Scraper details:** Use a Playwright `ScraperService` (worker) that consumes jobs from `bullmq`, renders pages with `route.abort()` for non-HTML assets, extracts HTML, runs `@mozilla/readability` for the article body, then forwards content to the Analysis service.
+- [x] **Scraper details:** Use a Playwright `ScraperService` (worker) that consumes jobs from `bullmq`, renders pages with `route.abort()` for non-HTML assets, extracts HTML, runs `@mozilla/readability` for the article body, then forwards content to the Analysis service.
+- [ ] **Technical Dredging:** For snippet-only or paywalled sources (e.g., electronic media, paywalled papers), implement fallback logic:
+  - Use article titles to find AMP versions or Social Media metadata (OpenGraph).
+  - **Print-Edition Discovery:** Automatically navigate to "Today's Paper" or "E-Paper" archive links to extract a considerable substance of the news (often bypassing web-snippet/paywall limitations), even if not always the full 100% text.
 
 ### **Phase 3: The "Delta" Dashboard (The "Showcase")**
 
@@ -54,19 +57,18 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 
 ### **Libraries & Tools Master List**
 
-| **Layer**           | **Tools**                                                | **Purpose**                                                                 |
-| ------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------- |
-| **Ingestion**       | `undici`, `rss-parser`, `playwright`                     | Bypassing WAFs and parsing RSS/Atom feeds.                                  |
-| **Text Extraction** | `jsdom`, `@mozilla/readability`, `unfluff`               | Extracting full article text for better LLM context.                        |
-| **Core AI**         | `groq`                                                   | Groq for structured JSON extraction, embeddings, and framing.               |
-| **Specialized NLP** | LLM-first pipeline (Groq) / Hugging Face                 | Target-dependent sentiment and framing extraction.                          |
-| **Validation**      | `zod`                                                    | Ensuring AI outputs conform to schemas at runtime.                          |
-| **Clustering**      | `string-similarity`, `fast-fuzzy`, `fuse.js`, `pgvector` | Grouping headlines into "Event Clusters" via fuzzy or embedding similarity. |
-| **Analytics**       | `DuckDB`, `danfojs-node`                                 | High-speed data manipulation and OLAP.                                      |
-| **UI**              | `Next.js`, `react-plotly.js`                             | Building the "Heatmap of Bias" dashboard.                                   |
-| **Orchestration**   | `NestJS`, `@nestjs/schedule`, `bullmq`, `redis`          | Scheduler, API, and durable job queues.                                     |
-| **DB / ORM**        | `pg`, `pgvector`, `drizzle-orm`                          | Postgres with vector extension and lightweight ORM.                         |
-| **Scraping**        | `playwright`, `undici`, `rss-parser`                     | Rendering fallback, fast HTTP fetches, and feed parsing.                    |
+| **Layer**            | **Tools**                                       | **Purpose**                                                   |
+| -------------------- | ----------------------------------------------- | ------------------------------------------------------------- |
+| **Ingestion**        | `undici`, `rss-parser`, `playwright`            | Bypassing WAFs and parsing RSS/Atom feeds.                    |
+| **Text Extraction**  | `jsdom`, `@mozilla/readability`, `unfluff`      | Extracting full article text for better LLM context.          |
+| **Core AI**          | `groq`                                          | Groq for structured JSON extraction, embeddings, and framing. |
+| **Specialized NLP**  | LLM-first pipeline (Groq) / Hugging Face        | Target-dependent sentiment and framing extraction.            |
+| **Validation**       | `zod`                                           | Ensuring AI outputs conform to schemas at runtime.            |
+| **Analytics/Search** | `pgvector` (Postgres)                           | High-speed similarity search and vector analytics.            |
+| **UI**               | `Next.js`, `react-plotly.js`                    | Building the "Heatmap of Bias" dashboard.                     |
+| **Orchestration**    | `NestJS`, `@nestjs/schedule`, `bullmq`, `redis` | Scheduler, API, and durable job queues.                       |
+| **DB / ORM**         | `pg`, `pgvector`, `drizzle-orm`                 | Postgres with vector extension and lightweight ORM.           |
+| **Scraping**         | `playwright`, `undici`, `rss-parser`            | Rendering fallback, fast HTTP fetches, and feed parsing.      |
 
 ### **Immediate 48-Hour Sprint**
 
@@ -75,4 +77,4 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 - [ ] Manually trigger the adjective extraction prompt via `groq` to see if the "Delta" is visible. If it is, you have your **"Quantum of Utility"** for the application.
 
 - [x] Start the Nest API (apps/api) in dev mode and verify `GET /providers` returns the canonical list.
-- [ ] Enqueue a single scrape job or call `/fetch?source=<id>` to validate the ScraperService and Readability extraction.
+- [x] Enqueue a single scrape job or call `/fetch?source=<id>` to validate the ScraperService and Readability extraction.
