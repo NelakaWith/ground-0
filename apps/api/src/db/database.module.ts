@@ -1,13 +1,9 @@
 import { Module, Global } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from './schema';
 
-/**
- * DatabaseModule:
- * Configures the Postgres pool and provides the Drizzle DB instance globally.
- */
 @Global()
 @Module({
   providers: [
@@ -15,10 +11,11 @@ import * as schema from './schema';
       provide: 'DRIZZLE_DB',
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const pool = new Pool({
-          connectionString: configService.get<string>('DATABASE_URL'),
-        });
-        return drizzle(pool, { schema });
+        const connectionString = configService.get<string>(
+          'DATABASE_URL',
+        ) as string;
+        const client = neon(connectionString);
+        return drizzle(client, { schema });
       },
     },
   ],
