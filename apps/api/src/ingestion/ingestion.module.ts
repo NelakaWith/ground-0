@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, Logger } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bullmq';
+import { ConfigService } from '@nestjs/config';
 import { NewsDiscoveryService } from './news-discovery.service';
 import { Queue } from 'bullmq';
 import type { RedisOptions } from 'ioredis';
@@ -25,17 +26,35 @@ import type { RedisOptions } from 'ioredis';
       /**
        * 'SCRAPE_QUEUE' Provider:
        * Manually instantiates and provides the BullMQ Queue instance.
-       * We use a manual factory here to ensure custom Redis connection logic
-       * (e.g., pulling host/port from environment variables) and to decouple
-       * the underlying BullMQ 'Queue' object for more granular control.
        */
       provide: 'SCRAPE_QUEUE',
-      useFactory: () => {
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const logger = new Logger('RedisConnection');
         const connection: RedisOptions = {
-          host: process.env.REDIS_HOST ?? '127.0.0.1',
-          port: Number(process.env.REDIS_PORT ?? 6379),
+          host: configService.get<string>('REDIS_HOST') ?? '127.0.0.1',
+          port: configService.get<number>('REDIS_PORT') ?? 6379,
         };
-        return new Queue('scrape', { connection });
+
+        const queue = new Queue('scrape', { connection });
+
+        /**
+         * BullMQ provides a waitUntilReady() method that resolves when the
+         * underlying Redis client has successfully established a connection.
+         */
+        void queue
+          .waitUntilReady()
+          .then(() => {
+            logger.log(
+              `✅ Successfully connected to Redis at ${connection.host}:${connection.port}`,
+            );
+          })
+          .catch((err: unknown) => {
+            const msg = err instanceof Error ? err.message : String(err);
+            logger.error(`🛑 Failed to connect to Redis: ${msg}`);
+          });
+
+        return queue;
       },
     },
   ],

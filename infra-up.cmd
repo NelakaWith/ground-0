@@ -1,0 +1,3 @@
+@echo off
+echo Waking up WSL/Redis...
+wsl
