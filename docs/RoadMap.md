@@ -14,16 +14,20 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
   - **Queue 3 (analysis):** Calls LLM, saves final data to Postgres (including embeddings with `pgvector`).
   - [x] `rss-parser`: Standardize RSS/Atom feeds.
   - [x] **Logic:** Implement **"Near-Duplicate Detection"** using fuzzy string libraries (`string-similarity` / `fast-fuzzy`) or embedding similarity (85% threshold) with `pgvector` to flag the same "Event Cluster" immediately.
+  - [x] **Throttling:** Limit RSS discovery to 3 stories per outlet during development to ensure high-quality debugging and avoid rate-limiting.
 - [x] **DB Update Points:**
   - [x] Setting up Drizzle ORM and Article Schema.
   - [x] Discovery: Insert new article metadata (checks for existing URLs).
-  - [x] Scraper: Update article with full text.
+  - [x] Scraper: Update article with full text and quality flags (`is_snippet`, `is_paywalled`).
   - Analysis: Update article with LLM results; sync embeddings to `pgvector`.
 - [ ] **YC Angle:** This shows "resourcefulness.” You aren't just using a standard library; you're actively overcoming local technical hurdles (WAFs/Cloudflare).
 
 ### **Phase 2: The Intelligence Hybrid (The "Brain")**
 
 - [ ] **Goal:** Move from general sentiment to "target-dependent” bias.
+
+- [ ] **Strategy: English-First Focus**
+  - Temporarily exclude Sinhala/Tamil and TV sources to focus on high-fidelity English text extraction. This ensures the LLM (Groq) has the cleanest possible context for the "Quantum of Utility" demo.
 
 - [ ] **The "Double-Pass" Analysis:**
   - [ ] **Pass 1 (Entity Detection):** Use `groq` to identify the "Target" of the news (e.g., "The President," "The JVP," "The Central Bank").
@@ -37,6 +41,7 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 - [ ] **Technical Dredging:** For snippet-only or paywalled sources (e.g., electronic media, paywalled papers), implement fallback logic:
   - Use article titles to find AMP versions or Social Media metadata (OpenGraph).
   - **Print-Edition Discovery:** Automatically navigate to "Today's Paper" or "E-Paper" archive links to extract a considerable substance of the news (often bypassing web-snippet/paywall limitations), even if not always the full 100% text.
+  - **Auto-Scroll & Hydration:** Implement active page interaction (scrolling, clicking "read more") in Playwright to trigger JS-heavy content loading for recalcitrant sites.
 
 ### **Phase 3: The "Delta" Dashboard (The "Showcase")**
 
