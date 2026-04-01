@@ -21,21 +21,23 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/schedule": "^6.1.1",
+    "@swc/helpers": "^0.5.20",
     "@types/string-similarity": "^4.0.2",
     "bullmq": "^5.71.1",
+    "dice-coefficient": "^2.1.1",
     "drizzle-orm": "^0.45.2",
     "ioredis": "^5.10.1",
     "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
     "rss-parser": "^3.13.0",
-    "rxjs": "^7.8.1",
-    "string-similarity": "^4.0.4"
+    "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

@@ -2,7 +2,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import type ParserType from 'rss-parser';
 import * as ParserNS from 'rss-parser';
-import * as stringSimilarity from 'string-similarity';
+import { diceCoefficient } from 'dice-coefficient';
 import providers from '../feed/providers';
 import type { Queue } from 'bullmq';
 
@@ -138,12 +138,14 @@ export class NewsDiscoveryService {
   private checkNearDuplicate(title: string): boolean {
     if (this.processedHeadlines.size === 0) return false;
 
-    const matches = stringSimilarity.findBestMatch(
-      title,
-      Array.from(this.processedHeadlines),
-    );
+    // Iterate through in-memory cache and calculate similarity.
+    // Threshold of 0.85 (85% similarity) to flag as duplicate.
+    for (const cached of this.processedHeadlines) {
+      if (diceCoefficient(title, cached) > 0.85) {
+        return true;
+      }
+    }
 
-    // Threshold of 0.85 (85% similarity) to flag as duplicate
-    return matches.bestMatch.rating > 0.85;
+    return false;
   }
 }
