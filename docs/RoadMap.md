@@ -15,6 +15,7 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
   - [x] `rss-parser`: Standardize RSS/Atom feeds.
   - [x] **Logic:** Implement **"Near-Duplicate Detection"** using fuzzy string libraries (`string-similarity` / `fast-fuzzy`) or embedding similarity (85% threshold) with `pgvector` to flag the same "Event Cluster" immediately.
 - [ ] **DB Update Points:**
+  - [x] Setting up Drizzle ORM and Article Schema.
   - Discovery: Insert new article metadata.
   - Scraper: Update article with full text.
   - Analysis: Update article with LLM results; sync metrics to DuckDB.
