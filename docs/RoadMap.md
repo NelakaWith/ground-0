@@ -13,7 +13,7 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
   - **Queue 2 (scraper):** Runs Playwright, saves text to Postgres, enqueues analysis jobs.
   - **Queue 3 (analysis):** Calls LLM, saves final data to Postgres and DuckDB.
   - [x] `rss-parser`: Standardize RSS/Atom feeds.
-  - [ ] **Logic:** Implement **"Near-Duplicate Detection"** using fuzzy string libraries (`string-similarity` / `fast-fuzzy`) or embedding similarity (85% threshold) with `pgvector` to flag the same "Event Cluster" immediately.
+  - [x] **Logic:** Implement **"Near-Duplicate Detection"** using fuzzy string libraries (`string-similarity` / `fast-fuzzy`) or embedding similarity (85% threshold) with `pgvector` to flag the same "Event Cluster" immediately.
 - [ ] **DB Update Points:**
   - Discovery: Insert new article metadata.
   - Scraper: Update article with full text.

@@ -26,11 +26,13 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/schedule": "^6.1.1",
+    "@types/string-similarity": "^4.0.2",
     "bullmq": "^5.71.1",
     "ioredis": "^5.10.1",
     "reflect-metadata": "^0.2.2",
     "rss-parser": "^3.13.0",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "string-similarity": "^4.0.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
