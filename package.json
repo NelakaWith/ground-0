@@ -2,8 +2,9 @@
   "name": "ground-0",
   "private": true,
   "scripts": {
+    "infra:up": "wsl echo 'WSL and Redis starting...'",
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "pnpm infra:up && turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types"
