@@ -1,8 +1,11 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import type ParserType from 'rss-parser';
 import * as ParserNS from 'rss-parser';
 import { diceCoefficient } from 'dice-coefficient';
+import { eq } from 'drizzle-orm';
+import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
+import * as schema from '../db/schema';
 import providers from '../feed/providers';
 import type { Queue } from 'bullmq';
 
@@ -12,7 +15,7 @@ import type { Queue } from 'bullmq';
  * and enqueues valid items for the scraping phase.
  */
 @Injectable()
-export class NewsDiscoveryService {
+export class NewsDiscoveryService implements OnModuleInit {
   /**
    * RSS Parser instance.
    * Uses a type-safe constructor cast from the 'rss-parser' package.
@@ -32,10 +35,41 @@ export class NewsDiscoveryService {
   /**
    * @param scrapeQueue - Injected BullMQ 'scrape' Queue.
    * Used for enqueuing discovered URLs into the second phase (Scraping).
+   * @param db - Injected Neon Drizzle DB instance.
    */
-  constructor(@Inject('SCRAPE_QUEUE') private readonly scrapeQueue: Queue) {
+  constructor(
+    @Inject('SCRAPE_QUEUE') private readonly scrapeQueue: Queue,
+    @Inject('DRIZZLE_DB') private readonly db: NeonHttpDatabase<typeof schema>,
+  ) {
     // Correct CommonJS/ESM interop instantiator for rss-parser.
     this.parser = new (ParserNS as unknown as { new (): ParserType })();
+  }
+
+  /**
+   * Sync providers from the local config to the Neon DB on startup.
+   * Ensures that the 'providers' table is always populated with current feeds.
+   */
+  async onModuleInit() {
+    this.logger.log('Syncing providers to database...');
+    try {
+      for (const p of providers) {
+        await this.db
+          .insert(schema.providers)
+          .values({
+            id: p.id,
+            name: p.name,
+            rssUrl: p.rss_url,
+          })
+          .onConflictDoUpdate({
+            target: schema.providers.id,
+            set: { name: p.name, rssUrl: p.rss_url },
+          });
+      }
+      this.logger.log(`Synced ${providers.length} providers.`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Failed to sync providers: ${msg}`);
+    }
   }
 
   /**
@@ -45,7 +79,9 @@ export class NewsDiscoveryService {
    * Step 1: Iterate through known providers (RSS urls).
    * Step 2: Extract feed items.
    * Step 3: Perform 1st-pass "Near Duplicate" check on titles.
-   * Step 4: Enqueue new/unique articles for scraping.
+   * Step 4: Check if URL already exists in DB.
+   * Step 5: Save discovery metadata to DB.
+   * Step 6: Enqueue new/unique articles for scraping.
    */
   @Cron(CronExpression.EVERY_30_MINUTES)
   async handleCron() {
@@ -59,13 +95,35 @@ export class NewsDiscoveryService {
         for (const item of feed.items || []) {
           if (!item.link || !item.title) continue;
 
-          // --- Phase 1: Near-Duplicate Detection ---
+          // --- Step 1: Near-Duplicate Detection (Fuzzy) ---
           const isDuplicate = this.checkNearDuplicate(item.title);
           if (isDuplicate) {
-            this.logger.debug(`Skipping duplicate: ${item.title}`);
+            this.logger.debug(`Skipping fuzzy duplicate: ${item.title}`);
             continue;
           }
 
+          // --- Step 2: DB-based Duplicate Detection (Exact URL) ---
+          const existing = await this.db
+            .select()
+            .from(schema.articles)
+            .where(eq(schema.articles.url, item.link))
+            .limit(1);
+
+          if (existing.length > 0) {
+            this.logger.debug(`URL already in DB: ${item.link}`);
+            continue;
+          }
+
+          // --- Step 3: Save Discovery Metadata to DB ---
+          // This marks the "Discovery" point in the DB Update lifecycle.
+          await this.db.insert(schema.articles).values({
+            url: item.link,
+            title: item.title,
+            providerId: p.id,
+            pubDate: item.pubDate,
+          });
+
+          // --- Step 4: Enqueue for Scraping ---
           const jobId = Buffer.from(String(item.link)).toString('base64');
           try {
             await this.scrapeQueue.add(
@@ -79,8 +137,8 @@ export class NewsDiscoveryService {
               {
                 jobId,
                 removeOnComplete: true,
-                attempts: 2,
-                backoff: { type: 'exponential', delay: 1000 },
+                attempts: 3, // Increased attempts for scraper robustness
+                backoff: { type: 'exponential', delay: 2000 },
               },
             );
             this.logger.debug(`Enqueued ${item.link}`);
