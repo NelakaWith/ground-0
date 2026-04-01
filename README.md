@@ -1,159 +1,82 @@
-# Turborepo starter
+# Ground-0: The Information Delta Platform
 
-This Turborepo starter is maintained by the Turborepo core team.
+**Ground-0** is an AI-powered media surveillance and bias-detection platform designed to surface "The Truth in the Gap." By analyzing Sri Lankan media through a multi-stage ingestion and intelligence pipeline, it identifies how different outlets (State vs. Private) frame the same events, detect omissions, and quantify target-specific sentiment.
 
-## Using this example
+## 🚀 Mission
 
-Run the following command:
+Sri Lanka's media landscape is a battleground of political framing. The most valuable insight isn't in what is reported, but in the **Information Delta**—the difference between Version A and Version B of the same event. Ground-0 automates the detection of this delta to provide a "Quantum of Utility" for analysts and informed citizens.
 
-```sh
-npx create-turbo@latest
-```
+---
 
-## What's inside?
+## 🏗 System Architecture
 
-This Turborepo includes the following packages/apps:
+The platform is built as a high-performance **NestJS** monorepo using **Turborepo** and a distributed **BullMQ** worker architecture to process data through three primary stages:
 
-### Apps and Packages
+### 1. The Ingestion Engine (Discovery & Dredging)
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+- **RSS Poller:** Standardizes feeds from national newspapers (Daily Mirror, Island, News.lk, etc.).
+- **Near-Duplicate Detection:** Uses `pgvector` and fuzzy matching to group stories into "Event Clusters" across sources automatically.
+- **Technical Dredging:** A Playwright-powered scraper that bypasses WAFs, handles 5-second JS delays, and implements fallback logic (AMP/Print Edition) to recover content for paywalled or summary-only news.
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+### 2. The Intelligence Hybrid (Analysis)
 
-### Utilities
+- **Double-Pass LLM Pipeline (Groq/LLM):**
+  - **Pass 1 (Entity Detection):** Identifies the "Target" (e.g., Central Bank, IMF, JVP).
+  - **Pass 2 (Framing Extraction):** Scores sentiment relative to the target and extracts "Charged Adjectives" (e.g., "necessary adjustment" vs. "crippling tax").
+- **The Delta Metric:** Quantifies which facts are missing from state-sponsored versions of a story using vector search.
 
-This Turborepo has some additional tools already setup for you:
+### 3. The Dashboard (Visualizing Bias)
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+- **Sentiment Spectrum:** Visualizes where each outlet sits on specific political events.
+- **Omission Alerts:** Highlights facts present in the cluster but absent in specific reports.
 
-### Build
+---
 
-To build all apps and packages, run the following command:
+## 🛠 Tech Stack
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+- **Framework:** [NestJS](https://nestjs.com/) (Distributed Worker Pattern)
+- **Orchestration:** [Turborepo](https://turbo.build/) + [pnpm](https://pnpm.io/)
+- **Data Pipeline:** [BullMQ](https://docs.bullmq.io/) + [Redis](https://redis.io/)
+- **Database:** [PostgreSQL (Neon)](https://neon.tech/) with [pgvector](https://github.com/pgvector/pgvector)
+- **ORM:** [Drizzle ORM](https://orm.drizzle.team/)
+- **Extraction:** [Playwright](https://playwright.dev/) + [@mozilla/readability](https://github.com/mozilla/readability)
+- **AI Layer:** [Groq](https://groq.com/) for high-speed LLM inference.
 
-```sh
-cd my-turborepo
-turbo build
-```
+---
 
-Without global `turbo`, use your package manager:
+## 🚦 Getting Started
 
-```sh
-cd my-turborepo
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
-```
+### Prerequisites
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+- Node.js >= 18
+- pnpm
+- Docker (for local Redis/Infra)
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+### Installation
 
-```sh
-turbo build --filter=docs
-```
+1.  **Clone the repo:**
+    ```bash
+    git clone https://github.com/NelakaWith/ground-0.git
+    cd ground-0
+    ```
+2.  **Install dependencies:**
+    ```bash
+    pnpm install
+    ```
+3.  **Local Infrastructure:**
+    The project includes an `infra-up.cmd` to spin up local Redis/Postgres requirements.
+    ```bash
+    pnpm dev
+    ```
 
-Without global `turbo`:
+---
 
-```sh
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+## 📅 Roadmap & Progress
 
-### Develop
+See the detailed [RoadMap.md](docs/RoadMap.md) for Phase 1 (Ingestion), Phase 2 (Intelligence), and Phase 3 (Showcase) progress.
 
-To develop all apps and packages, run the following command:
+---
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+## 🏛 License
 
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+Private / Proprietary Prototype.
