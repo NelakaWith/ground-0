@@ -37,11 +37,14 @@ export class AnalysisProcessor extends WorkerHost {
       const article = result[0];
       if (!article.content || article.content.length < 50) {
         this.logger.warn(
-          `Article content too short for analysis: ${articleId}`,
+          `Article content too short or null for analysis: ${articleId}`,
         );
         await this.db
           .update(articles)
-          .set({ processingStatus: 'failed' })
+          .set({
+            processingStatus: 'failed',
+            updatedAt: new Date(),
+          })
           .where(eq(articles.id, articleId));
         return { success: false, reason: 'insufficient_content' };
       }

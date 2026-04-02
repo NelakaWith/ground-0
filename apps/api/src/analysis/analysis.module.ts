@@ -16,7 +16,15 @@ import { AnalysisProcessor } from './analysis.processor';
         },
       }),
     }),
-    BullModule.registerQueue({ name: 'analyze' }),
+    BullModule.registerQueue({
+      name: 'analyze',
+      defaultJobOptions: {
+        attempts: 2,
+        backoff: { type: 'fixed', delay: 10000 },
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    }),
   ],
   providers: [AnalysisService, AnalysisProcessor],
   exports: [AnalysisService],

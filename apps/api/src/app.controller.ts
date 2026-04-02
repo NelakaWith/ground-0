@@ -24,9 +24,9 @@ export class AppController {
 
   @Post('recover')
   async triggerRecovery() {
-    // Placeholder for recovery logic if needed later
-    this.newsDiscoveryService.handleCron(); // For now, re-triggering discovery acts as a soft recovery
-    return { status: 'Recovery cycle triggered' };
+    // True recovery logic to re-dequeue stuck articles
+    const result = await this.appService.recoverStuckArticles();
+    return { status: 'Recovery cycle triggered', detail: result };
   }
 
   @Get('status')

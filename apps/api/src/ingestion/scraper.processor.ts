@@ -49,9 +49,19 @@ export class ScraperProcessor extends WorkerHost {
 
       if (!content) {
         this.logger.warn(
-          `Could not extract usable content for ${link}. Skipping DB update.`,
+          `Could not extract usable content for ${link}. Marking as failed.`,
         );
-        return;
+
+        // Update DB status to failed so it doesn't stay in 'discovered' forever
+        await this.db
+          .update(schema.articles)
+          .set({
+            processingStatus: 'failed',
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.articles.url, link));
+
+        return { success: false, reason: 'no_content_extracted' };
       }
 
       // Step 2: Update the 'articles' record in Postgres with the extracted text
