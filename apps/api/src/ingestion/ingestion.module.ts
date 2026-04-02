@@ -29,7 +29,10 @@ import type { RedisOptions } from 'ioredis';
         },
       }),
     }),
-    BullModule.registerQueue({ name: 'scrape' }),
+    BullModule.registerQueue(
+      { name: 'scrape' },
+      { name: 'analyze' }, // Register to allow ScraperProcessor to enqueue jobs
+    ),
   ],
   providers: [
     NewsDiscoveryService,

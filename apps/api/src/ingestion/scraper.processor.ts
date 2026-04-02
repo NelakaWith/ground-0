@@ -1,6 +1,6 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Processor, WorkerHost, InjectQueue } from '@nestjs/bullmq';
 import { Inject, Logger } from '@nestjs/common';
-import { Job } from 'bullmq';
+import { Job, Queue } from 'bullmq';
 import { ScraperService } from './scraper.service';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../db/schema';
@@ -24,6 +24,7 @@ export class ScraperProcessor extends WorkerHost {
   constructor(
     private readonly scraperService: ScraperService,
     @Inject('DRIZZLE_DB') private readonly db: NeonHttpDatabase<typeof schema>,
+    @InjectQueue('analyze') private readonly analyzeQueue: Queue,
   ) {
     super();
   }
@@ -71,9 +72,13 @@ export class ScraperProcessor extends WorkerHost {
         );
       } else {
         this.logger.log(`✅ Success for ${link} (Length: ${content.length})`);
-      }
 
-      // TODO (Future Phase): Enqueue to Analysis Queue here.
+        // Step 3: Enqueue to Analysis Queue
+        if (result[0]?.id) {
+          await this.analyzeQueue.add('analyze', { articleId: result[0].id });
+          this.logger.log(`🧬 Enqueued analysis job for ${result[0].id}`);
+        }
+      }
 
       return { length: content.length, articleId: result[0]?.id };
     } catch (err: unknown) {

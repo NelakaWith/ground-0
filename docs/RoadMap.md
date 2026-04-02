@@ -4,7 +4,7 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 
 ### **Phase 1: The Robust Ingestion Engine (The "Hustle")**
 
-- [ ] **Goal:** Establish a 100% reliable, de-duplicated data stream from Sri Lankan media using a stepped queue pipeline.
+- [x] **Goal:** Establish a 100% reliable, de-duplicated data stream from Sri Lankan media using a stepped queue pipeline.
 
 - [x] **Infrastructure:** \* `undici` (HTTP client) with Chrome/120 headers; fallback to `playwright` (Chromium) for JS-heavy pages and challenge solving.
 
@@ -19,22 +19,22 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
   - [x] Setting up Drizzle ORM and Article Schema.
   - [x] Discovery: Insert new article metadata (checks for existing URLs).
   - [x] Scraper: Update article with full text and quality flags (`is_snippet`, `is_paywalled`).
-  - Analysis: Update article with LLM results; sync embeddings to `pgvector`.
+  - [x] Analysis: Update article with LLM results; sync embeddings with `pgvector` (Next step).
 - [ ] **YC Angle:** This shows "resourcefulness.” You aren't just using a standard library; you're actively overcoming local technical hurdles (WAFs/Cloudflare).
 
 ### **Phase 2: The Intelligence Hybrid (The "Brain")**
 
-- [ ] **Goal:** Move from general sentiment to "target-dependent” bias.
+- [x] **Goal:** Move from general sentiment to "target-dependent” bias.
 
-- [ ] **Strategy: English-First Focus**
+- [x] **Strategy: English-First Focus**
   - Temporarily exclude Sinhala/Tamil and TV sources to focus on high-fidelity English text extraction. This ensures the LLM (Groq) has the cleanest possible context for the "Quantum of Utility" demo.
 
-- [ ] **The "Double-Pass" Analysis:**
-  - [ ] **Pass 1 (Entity Detection):** Use `groq` to identify the "Target" of the news (e.g., "The President," "The JVP," "The Central Bank").
-  - [ ] **Pass 2 (Sentiment Score):** Pipe that specific target into an LLM-first pipeline (Groq or an optional specialized inference model) to produce target-specific sentiment scores and charged-adjective lists.
-- [ ] **Framing Extraction:** Use `groq` to extract **"Charged Adjectives."**
-  - [ ] _State Media:_ "The necessary economic adjustment..."
-  - [ ] _Private Media:_ "The crippling tax hike..."
+- [x] **The "Double-Pass" Analysis:**
+  - [x] **Pass 1 (Entity Detection):** Use `groq` to identify the "Target" of the news (e.g., "The President," "The JVP," "The Central Bank").
+  - [x] **Pass 2 (Sentiment Score):** Pipe that specific target into an LLM-first pipeline (Groq or an optional specialized inference model) to produce target-specific sentiment scores and charged-adjective lists.
+- [x] **Framing Extraction:** Use `groq` to extract **"Charged Adjectives."**
+  - [x] _State Media:_ "The necessary economic adjustment..."
+  - [x] _Private Media:_ "The crippling tax hike..."
 - [ ] **YC Angle:** This demonstrates "technical depth.” You aren't just "wrapping an API"; you're building a multi-stage pipeline that combines LLM reasoning with deterministic NLP where needed.
 
 - [x] **Scraper details:** Use a Playwright `ScraperService` (worker) that consumes jobs from `bullmq`, renders pages with `route.abort()` for non-HTML assets, extracts HTML, runs `@mozilla/readability` for the article body, then forwards content to the Analysis service.

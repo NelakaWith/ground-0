@@ -24,6 +24,12 @@ export const articles = pgTable('articles', {
   sentiment: text('sentiment'),
   summary: text('summary'),
 
+  // New Intelligent Framing Fields
+  target: text('target'), // Primary subject identified in Pass 1
+  entities: text('entities'), // JSON array of secondary entities
+  chargedAdjectives: text('charged_adjectives'), // JSON array of extracted adjectives/phrases
+  sentimentScore: real('sentiment_score'), // Pass 2 relative sentiment score
+
   // Flags for content quality and paywalls
   isPaywalled: text('is_paywalled').default('false'), // or boolean if supported
   isSnippet: text('is_snippet').default('false'),

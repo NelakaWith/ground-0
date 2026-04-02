@@ -18,10 +18,9 @@ import type { Queue } from 'bullmq';
 export class NewsDiscoveryService implements OnModuleInit {
   /**
    * RSS Parser instance.
-   * Uses a type-safe constructor cast from the 'rss-parser' package.
    * Provides normalization for different RSS/Atom formats.
    */
-  private readonly parser: InstanceType<typeof ParserNS>;
+  private readonly parser: ParserType;
   /** Logger instance for discovery-related events. */
   private readonly logger = new Logger(NewsDiscoveryService.name);
 
@@ -88,7 +87,9 @@ export class NewsDiscoveryService implements OnModuleInit {
     this.logger.log('Running scheduled discovery');
     for (const p of providers) {
       try {
-        const feed = await this.tryParseFeed(p.rss_url);
+        const feed = (await this.tryParseFeed(p.rss_url)) as ParserType.Output<{
+          [key: string]: any;
+        }>;
         const count = (feed.items && feed.items.length) || 0;
         this.logger.log(`Fetched ${p.name} — ${count} items`);
 
@@ -164,11 +165,9 @@ export class NewsDiscoveryService implements OnModuleInit {
    * @returns The parsed feed object.
    * @throws Error if parsing fails after retries.
    */
-  private async tryParseFeed(
-    url: string,
-  ): Promise<Awaited<ReturnType<InstanceType<typeof ParserNS>['parseURL']>>> {
+  private async tryParseFeed(url: string): Promise<any> {
     try {
-      return await this.parser.parseURL(url);
+      return await (this.parser.parseURL(url) as any);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('403')) {
