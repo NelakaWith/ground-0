@@ -20,8 +20,15 @@ export class ScraperService {
       const context = await browser.newContext({
         userAgent:
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        viewport: { width: 1280, height: 720 },
       });
       const page = await context.newPage();
+
+      // Set extra headers to look more like a real browser
+      await page.setExtraHTTPHeaders({
+        'Accept-Language': 'en-US,en;q=0.9',
+        Referer: 'https://www.google.com/',
+      });
 
       // Optimize: Abort common non-essential resources to speed up extraction
       await page.route('**/*.{png,jpg,jpeg,gif,svg,css,woff,woff2}', (route) =>
@@ -29,10 +36,17 @@ export class ScraperService {
       );
 
       // Navigate with 30s timeout and wait for DOM content loaded (faster than networkidle)
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      try {
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      } catch (gotoErr) {
+        this.logger.warn(
+          `Initial goto failed for ${url}, retrying with commit...`,
+        );
+        await page.goto(url, { waitUntil: 'commit', timeout: 30000 });
+      }
 
       // Quick wait for potential hydration if needed
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(2000);
 
       // --- Improvement: Scroll to bottom with safety cap ---
       await page.evaluate(async () => {
