@@ -38,10 +38,11 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 - [ ] **YC Angle:** This demonstrates "technical depth.” You aren't just "wrapping an API"; you're building a multi-stage pipeline that combines LLM reasoning with deterministic NLP where needed.
 
 - [x] **Scraper details:** Use a Playwright `ScraperService` (worker) that consumes jobs from `bullmq`, renders pages with `route.abort()` for non-HTML assets, extracts HTML, runs `@mozilla/readability` for the article body, then forwards content to the Analysis service.
-- [ ] **Technical Dredging:** For snippet-only or paywalled sources (e.g., electronic media, paywalled papers), implement fallback logic:
-  - Use article titles to find AMP versions or Social Media metadata (OpenGraph).
-  - **Print-Edition Discovery:** Automatically navigate to "Today's Paper" or "E-Paper" archive links to extract a considerable substance of the news (often bypassing web-snippet/paywall limitations), even if not always the full 100% text.
-  - **Auto-Scroll & Hydration:** Implement active page interaction (scrolling, clicking "read more") in Playwright to trigger JS-heavy content loading for recalcitrant sites.
+- [ ] **Technical Dredging & AI Browsing:** For snippet-only, paywalled, or highly-protected sources (e.g., EconomyNext, Daily Mirror):
+  - **AI-Driven Fallback:** Integrate **Crawl4AI** or **Firecrawl** (Open Source) as a secondary ingestion layer. This uses LLM-aware navigation to bypass 100% of standard scraper blocks (WAFs/Bot-detection) by treating the page as a semantic structure rather than a DOM tree.
+  - **Agentic Interaction:** Use **AgentQL** or a self-hosted **Browserless** instance to navigate "Today's Paper" archives or handle "Read More" hydration for JS-heavy content.
+  - **Print-Edition Discovery:** Automatically navigate to E-Paper archive links to extract substance, even if not 100% text.
+  - **Auto-Scroll & Hydration:** Implement active page interaction (scrolling, clicking) in Playwright/AI-Browser to trigger content loading.
 
 ### **Phase 3: The "Delta" Dashboard (The "Showcase")**
 
@@ -62,18 +63,18 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 
 ### **Libraries & Tools Master List**
 
-| **Layer**            | **Tools**                                       | **Purpose**                                                   |
-| -------------------- | ----------------------------------------------- | ------------------------------------------------------------- |
-| **Ingestion**        | `undici`, `rss-parser`, `playwright`            | Bypassing WAFs and parsing RSS/Atom feeds.                    |
-| **Text Extraction**  | `jsdom`, `@mozilla/readability`, `unfluff`      | Extracting full article text for better LLM context.          |
-| **Core AI**          | `groq`                                          | Groq for structured JSON extraction, embeddings, and framing. |
-| **Specialized NLP**  | LLM-first pipeline (Groq) / Hugging Face        | Target-dependent sentiment and framing extraction.            |
-| **Validation**       | `zod`                                           | Ensuring AI outputs conform to schemas at runtime.            |
-| **Analytics/Search** | `pgvector` (Postgres)                           | High-speed similarity search and vector analytics.            |
-| **UI**               | `Next.js`, `react-plotly.js`                    | Building the "Heatmap of Bias" dashboard.                     |
-| **Orchestration**    | `NestJS`, `@nestjs/schedule`, `bullmq`, `redis` | Scheduler, API, and durable job queues.                       |
-| **DB / ORM**         | `pg`, `pgvector`, `drizzle-orm`                 | Postgres with vector extension and lightweight ORM.           |
-| **Scraping**         | `playwright`, `undici`, `rss-parser`            | Rendering fallback, fast HTTP fetches, and feed parsing.      |
+| **Layer**            | **Tools**                                        | **Purpose**                                                   |
+| -------------------- | ------------------------------------------------ | ------------------------------------------------------------- |
+| **Ingestion**        | `undici`, `rss-parser`, `playwright`, `crawl4ai` | Bypassing WAFs/Bot-guards like EconomyNext.                   |
+| **Text Extraction**  | `jsdom`, `@mozilla/readability`, `firecrawl`     | Extracting clean Markdown or JSON from messy HTML.            |
+| **Core AI**          | `groq`                                           | Groq for structured JSON extraction, embeddings, and framing. |
+| **Specialized NLP**  | LLM-first (Groq) / **AgentQL** (Semantic)        | Target-dependent sentiment and semantic element selection.    |
+| **Validation**       | `zod`                                            | Ensuring AI outputs conform to schemas at runtime.            |
+| **Analytics/Search** | `pgvector` (Postgres)                            | High-speed similarity search and vector analytics.            |
+| **UI**               | `Next.js`, `react-plotly.js`                     | Building the "Heatmap of Bias" dashboard.                     |
+| **Orchestration**    | `NestJS`, `@nestjs/schedule`, `bullmq`, `redis`  | Scheduler, API, and durable job queues.                       |
+| **DB / ORM**         | `pg`, `pgvector`, `drizzle-orm`                  | Postgres with vector extension and lightweight ORM.           |
+| **Scraping**         | `playwright`, `undici`, `rss-parser`             | Rendering fallback, fast HTTP fetches, and feed parsing.      |
 
 ### **Immediate 48-Hour Sprint**
 
