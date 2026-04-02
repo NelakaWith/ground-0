@@ -36,10 +36,9 @@ export class AnalysisService {
         messages: [
           {
             role: 'system',
-            content: `Analyze the following news text.
-            1. Identify the primary "Target" (the main person, organization, or policy being discussed).
-            2. List all secondary entities mentioned.
-            Output your response strictly in JSON format with keys "target" (string) and "entities" (array of strings).`,
+            content: `Identify the primary "Target" (person, entity, or process) and a list of key "Entities" mentioned in the text.
+            Output as JSON with keys "target" (string) and "entities" (array of strings).
+            IMPORTANT: Ensure values are properly escaped JSON strings within the object.`,
           },
           { role: 'user', content: text.substring(0, 10000) }, // Limit input to stay in reasonable token bounds
         ],
@@ -86,7 +85,8 @@ export class AnalysisService {
             1. Provide a sentiment score from -1.0 (extremely negative) to 1.0 (extremely positive).
             2. Extract a list of "Charged Adjectives" or phrases used to describe the target or the situation (e.g., "crippling", "essential", "landmark").
             3. A brief 1-sentence summary of the framing.
-            Output as JSON with keys "sentimentScore" (number), "chargedAdjectives" (array), and "summary" (string).`,
+            Output as JSON with keys "sentimentScore" (number), "chargedAdjectives" (array), and "summary" (string).
+            IMPORTANT: Ensure the "summary" value is a properly escaped JSON string wrapped in double quotes.`,
           },
           { role: 'user', content: text.substring(0, 10000) },
         ],

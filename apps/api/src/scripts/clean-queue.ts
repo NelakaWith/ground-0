@@ -15,7 +15,12 @@ async function main() {
   await queue.obliterate({ force: true });
 
   console.log('✅ Queue cleaned successfully.');
+
+  // Close the NestJS app context
   await app.close();
+
+  // Force exit after a small delay to ensure all connections (Redis/BullMQ) are severed
+  setTimeout(() => process.exit(0), 100);
 }
 
 main().catch((err) => {

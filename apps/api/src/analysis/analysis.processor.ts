@@ -91,4 +91,11 @@ export class AnalysisProcessor extends WorkerHost {
   onFailed(job: Job, error: Error) {
     this.logger.error(`❌ Job ${job.id} failed: ${error.message}`);
   }
+
+  @OnWorkerEvent('completed')
+  onCompleted(job: Job) {
+    this.logger.log(
+      `🏁 Pipeline Complete: Analysis finished for article: ${job.data.articleId}`,
+    );
+  }
 }

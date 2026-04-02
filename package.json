@@ -4,7 +4,7 @@
   "scripts": {
     "infra:up": "start cmd /c infra-up.cmd",
     "build": "turbo run build",
-    "dev": "pnpm infra:up && turbo run dev",
+    "dev": "turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types"

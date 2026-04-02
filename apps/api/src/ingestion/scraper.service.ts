@@ -28,23 +28,26 @@ export class ScraperService {
         route.abort(),
       );
 
-      // Navigate with timeout and wait for idle network
-      await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+      // Navigate with 30s timeout and wait for DOM content loaded (faster than networkidle)
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-      // --- Improvement: Scroll to bottom to trigger lazy-loading/hydration ---
+      // Quick wait for potential hydration if needed
+      await page.waitForTimeout(1000);
+
+      // --- Improvement: Scroll to bottom with safety cap ---
       await page.evaluate(async () => {
         await new Promise((resolve) => {
           let totalHeight = 0;
-          const distance = 100;
+          const distance = 400; // Faster scroll
           const timer = setInterval(() => {
             const scrollHeight = document.body.scrollHeight;
             window.scrollBy(0, distance);
             totalHeight += distance;
-            if (totalHeight >= scrollHeight) {
+            if (totalHeight >= scrollHeight || totalHeight > 10000) {
               clearInterval(timer);
               resolve(null);
             }
-          }, 100);
+          }, 50);
         });
       });
 
@@ -121,8 +124,6 @@ export class ScraperService {
       this.logger.log(
         `Successfully extracted ${cleanText.length} characters for ${url}`,
       );
-
-      return cleanText;
 
       return cleanText;
     } catch (err: unknown) {

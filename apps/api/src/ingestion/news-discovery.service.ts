@@ -72,7 +72,7 @@ export class NewsDiscoveryService implements OnModuleInit {
   }
 
   /**
-   * handleCron: Runs every 30 minutes.
+   * handleCron: Runs every 6 hours.
    * Discovers and enqueues new headlines for the scraping worker.
    *
    * Step 1: Iterate through known providers (RSS urls).
@@ -82,7 +82,7 @@ export class NewsDiscoveryService implements OnModuleInit {
    * Step 5: Save discovery metadata to DB.
    * Step 6: Enqueue new/unique articles for scraping.
    */
-  @Cron(CronExpression.EVERY_30_MINUTES)
+  @Cron(CronExpression.EVERY_6_HOURS)
   async handleCron() {
     this.logger.log('Running scheduled discovery');
     for (const p of providers) {

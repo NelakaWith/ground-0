@@ -30,7 +30,6 @@ export const providers: Provider[] = [
     name: 'EconomyNext',
     rss_url: 'https://economynext.com/feed/',
   },
-  { id: 'divaina-si', name: 'Divaina', rss_url: 'https://divaina.lk/feed/' },
   {
     id: 'daily-news-en',
     name: 'Daily News',
@@ -40,21 +39,6 @@ export const providers: Provider[] = [
     id: 'the-island-en',
     name: 'The Island',
     rss_url: 'https://island.lk/feed/',
-  },
-  {
-    id: 'lankadeepa-si',
-    name: 'Lankadeepa',
-    rss_url: 'https://www.lankadeepa.lk/rss/news/1',
-  },
-  {
-    id: 'lankadeepa-foreign-si',
-    name: 'Lankadeepa (Foreign)',
-    rss_url: 'https://www.lankadeepa.lk/rss/foreign/48',
-  },
-  {
-    id: 'dinamina-si',
-    name: 'Dinamina',
-    rss_url: 'https://www.dinamina.lk/feed/',
   },
 ];
 

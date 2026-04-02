@@ -30,8 +30,23 @@ import type { RedisOptions } from 'ioredis';
       }),
     }),
     BullModule.registerQueue(
-      { name: 'scrape' },
-      { name: 'analyze' }, // Register to allow ScraperProcessor to enqueue jobs
+      {
+        name: 'scrape',
+        defaultJobOptions: {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 5000 },
+          removeOnComplete: true,
+          removeOnFail: false,
+        },
+      },
+      {
+        name: 'analyze',
+        defaultJobOptions: {
+          attempts: 2,
+          backoff: { type: 'fixed', delay: 10000 },
+          removeOnComplete: true,
+        },
+      },
     ),
   ],
   providers: [
@@ -78,6 +93,6 @@ import type { RedisOptions } from 'ioredis';
    * Export the queue provider so other modules (like a future ScraperModule)
    * can inject it to manage jobs.
    */
-  exports: ['SCRAPE_QUEUE'],
+  exports: ['SCRAPE_QUEUE', NewsDiscoveryService],
 })
 export class IngestionModule {}
