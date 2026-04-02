@@ -1,0 +1,8 @@
+$kind: http-request
+name: Discovery
+url: http://localhost:3000/fetch
+method: POST
+body:
+  type: json
+  content: ""
+order: 1775135728563
