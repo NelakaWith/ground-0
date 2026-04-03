@@ -1,18 +1,49 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, OnModuleInit } from '@nestjs/common';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from './db/schema';
-import { sql, eq, and, lt } from 'drizzle-orm';
+import { sql, and, lt } from 'drizzle-orm';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 
 @Injectable()
-export class AppService {
+export class AppService implements OnModuleInit {
   private readonly logger = new Logger(AppService.name);
 
   constructor(
     @Inject('DRIZZLE_DB') private readonly db: NeonHttpDatabase<typeof schema>,
     @InjectQueue('scrape') private readonly scrapeQueue: Queue,
   ) {}
+
+  async onModuleInit() {
+    // Check crawler health on app startup
+    await this.checkCrawlerHealth();
+  }
+
+  private async checkCrawlerHealth(): Promise<void> {
+    const crawlerUrl = process.env.CRAWLER_URL || 'http://127.0.0.1:3001';
+
+    try {
+      const response = await fetch(`${crawlerUrl}/health`);
+
+      if (response.ok) {
+        const data = (await response.json()) as {
+          status: string;
+          service: string;
+        };
+        this.logger.log(
+          `✅ Crawler service is healthy (${crawlerUrl}): ${JSON.stringify(data)}`,
+        );
+      } else {
+        this.logger.warn(
+          `⚠️ Crawler service returned status ${response.status} (${crawlerUrl})`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `🛑 Failed to connect to Crawler service at ${crawlerUrl}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
 
   getHello(): string {
     return 'Hello World!';
