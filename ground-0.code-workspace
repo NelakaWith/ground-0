@@ -1,0 +1,77 @@
+{
+  "folders": [
+    {
+      "path": ".",
+    },
+    {
+      "path": "apps/api",
+      "name": "api",
+    },
+    {
+      "path": "apps/crawler",
+      "name": "crawler",
+    },
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/.next": true,
+      "**/dist": true,
+      "**/__pycache__": true,
+      "**/venv": true,
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/.next": true,
+      "**/dist": true,
+      "**/venv": true,
+    },
+    "python.defaultInterpreterPath": "${workspaceFolder:crawler}/venv/Scripts/python",
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.python",
+      "editor.formatOnSave": true,
+      "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit",
+      },
+    },
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true,
+    },
+    "[typescriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true,
+    },
+    "[javascript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true,
+    },
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit",
+    },
+  },
+  "extensions": {
+    "recommendations": [
+      "esbenp.prettier-vscode",
+      "dbaeumer.vscode-eslint",
+      "ms-python.python",
+      "ms-python.vscode-pylance",
+      "charliermarsh.ruff",
+      "ms-vscode.makefile-tools",
+    ],
+  },
+  "launch": {
+    "configurations": [
+      {
+        "name": "NestJS API Debug",
+        "type": "node",
+        "request": "launch",
+        "program": "${workspaceFolder:api}/node_modules/.bin/nest",
+        "args": ["start", "--debug", "--watch"],
+        "restart": true,
+        "console": "integratedTerminal",
+        "cwd": "${workspaceFolder:api}",
+      },
+    ],
+  },
+}

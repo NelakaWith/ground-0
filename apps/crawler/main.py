@@ -5,13 +5,20 @@ Exposes Crawl4AI functionality via FastAPI for consumption by NestJS apps/api
 import asyncio
 import os
 from contextlib import asynccontextmanager
-from typing import Optional
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from typing import Any, Optional, Protocol
+
 from crawl4ai import AsyncWebCrawler
 from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
 load_dotenv()
+
+class _CrawlResult(Protocol):
+    """Minimal protocol matching crawl4ai's CrawlResult."""
+    markdown: str
+    html: str
+
 
 # Global crawler instance
 crawler: Optional[AsyncWebCrawler] = None
@@ -51,6 +58,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Crawl4AI Microservice", version="0.1.0", lifespan=lifespan)
 
 
+async def _arun(url: str, **kwargs: Any) -> _CrawlResult:
+    """Typed wrapper around arun to bypass AsyncGenerator stubs."""
+    return await crawler.arun(url, **kwargs)  # type: ignore[misc, return-value]
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
@@ -74,8 +86,8 @@ async def crawl(request: CrawlRequest) -> CrawlResponse:
         raise HTTPException(status_code=503, detail="Crawler not initialized")
 
     try:
-        result = await crawler.arun(
-            url=request.url,
+        result = await _arun(
+            request.url,
             javascript_enabled=request.javascript_enabled,
             wait_until=request.wait_until,
             timeout=request.timeout,
@@ -115,7 +127,7 @@ async def crawl_batch(urls: list[str]):
         raise HTTPException(status_code=503, detail="Crawler not initialized")
 
     tasks = [
-        crawler.arun(url, javascript_enabled=True, wait_until="networkidle", timeout=10000)
+        _arun(url, javascript_enabled=True, wait_until="networkidle", timeout=10000)
         for url in urls
     ]
 
@@ -123,7 +135,7 @@ async def crawl_batch(urls: list[str]):
 
     responses = []
     for url, result in zip(urls, results):
-        if isinstance(result, Exception):
+        if isinstance(result, BaseException):
             responses.append(
                 CrawlResponse(
                     url=url,
