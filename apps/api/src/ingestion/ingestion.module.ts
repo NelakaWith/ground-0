@@ -93,6 +93,6 @@ import type { RedisOptions } from 'ioredis';
    * Export the queue provider so other modules (like a future ScraperModule)
    * can inject it to manage jobs.
    */
-  exports: ['SCRAPE_QUEUE', NewsDiscoveryService],
+  exports: [BullModule, 'SCRAPE_QUEUE', NewsDiscoveryService],
 })
 export class IngestionModule {}
