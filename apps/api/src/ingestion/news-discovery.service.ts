@@ -131,7 +131,7 @@ export class NewsDiscoveryService implements OnModuleInit {
           const jobId = Buffer.from(String(item.link)).toString('base64');
           try {
             await this.scrapeQueue.add(
-              'scrape-article',
+              'scrape',
               {
                 providerId: p.id,
                 link: item.link,

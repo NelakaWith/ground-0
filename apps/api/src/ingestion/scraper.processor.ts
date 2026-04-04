@@ -37,7 +37,9 @@ export class ScraperProcessor extends WorkerHost {
    * @param job - The BullMQ job containing relevant article data.
    */
   async process(job: Job<ScrapeJobData, any, string>): Promise<any> {
-    this.logger.log(`Processing job ${job.id} for article: ${job.data.link}`);
+    this.logger.log(
+      `👷 Worker received job: ${job.name} (ID: ${job.id}) for ${job.data.link}`,
+    );
     const { link } = job.data;
 
     if (!link) {
