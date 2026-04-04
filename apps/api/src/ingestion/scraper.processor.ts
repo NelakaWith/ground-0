@@ -2,6 +2,7 @@ import { Processor, WorkerHost, InjectQueue } from '@nestjs/bullmq';
 import { Inject, Logger } from '@nestjs/common';
 import { Job, Queue } from 'bullmq';
 import { ScraperService } from './scraper.service';
+import { StagehandService } from './stagehand.service';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../db/schema';
 import { eq } from 'drizzle-orm';
@@ -23,6 +24,7 @@ export class ScraperProcessor extends WorkerHost {
 
   constructor(
     private readonly scraperService: ScraperService,
+    private readonly stagehandService: StagehandService,
     @Inject('DRIZZLE_DB') private readonly db: NeonHttpDatabase<typeof schema>,
     @InjectQueue('analyze') private readonly analyzeQueue: Queue,
   ) {
@@ -45,11 +47,19 @@ export class ScraperProcessor extends WorkerHost {
 
     try {
       // Step 1: Perform actual page scraping and extraction
-      const content = await this.scraperService.scrapeContent(link);
+      let content = await this.scraperService.scrapeContent(link);
+
+      // Fallback 1: If Readability failed or returned empty, try Stagehand
+      if (!content) {
+        this.logger.log(
+          `Readability extraction failed for ${link}. Trying Stagehand AI fallback...`,
+        );
+        content = await this.stagehandService.extractArticle(link);
+      }
 
       if (!content) {
         this.logger.warn(
-          `Could not extract usable content for ${link}. Marking as failed.`,
+          `All extraction methods failed for ${link}. Marking as failed.`,
         );
 
         // Update DB status to failed so it doesn't stay in 'discovered' forever

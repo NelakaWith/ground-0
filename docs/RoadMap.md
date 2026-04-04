@@ -38,11 +38,11 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 - [ ] **YC Angle:** This demonstrates "technical depth.” You aren't just "wrapping an API"; you're building a multi-stage pipeline that combines LLM reasoning with deterministic NLP where needed.
 
 - [x] **Scraper details:** Use a Playwright `ScraperService` (worker) that consumes jobs from `bullmq`, renders pages with `route.abort()` for non-HTML assets, extracts HTML, runs `@mozilla/readability` for the article body, then forwards content to the Analysis service.
-- [ ] **Technical Dredging & AI Browsing:** For snippet-only, paywalled, or highly-protected sources (e.g., EconomyNext, Daily Mirror):
-  - **AI-Driven Fallback:** Integrate **Crawl4AI** or **Firecrawl** (Open Source) as a secondary ingestion layer. This uses LLM-aware navigation to bypass 100% of standard scraper blocks (WAFs/Bot-detection) by treating the page as a semantic structure rather than a DOM tree.
-  - **Agentic Interaction:** Use **AgentQL** or a self-hosted **Browserless** instance to navigate "Today's Paper" archives or handle "Read More" hydration for JS-heavy content.
-  - **Print-Edition Discovery:** Automatically navigate to E-Paper archive links to extract substance, even if not 100% text.
-  - **Auto-Scroll & Hydration:** Implement active page interaction (scrolling, clicking) in Playwright/AI-Browser to trigger content loading.
+- [x] **Technical Dredging & AI Browsing (Stagehand):** For snippet-only, paywalled, or highly-protected sources (e.g., EconomyNext, Daily Mirror):
+  - **AI-Driven Fallback:** Integrate **Crawl4AI** as a secondary ingestion layer for WAF/bot-guarded sources.
+  - **Agentic Interaction:** Use **Stagehand** `agent()` to handle multi-step navigation ("Today's Paper" archives, "Read More" hydration).
+  - **Print-Edition Discovery:** Use **Stagehand** `agent()` to navigate E-Paper archives and extract article links/content.
+  - **Auto-Scroll & Hydration:** Use **Stagehand** scroll + wait loop to trigger lazy-loaded content before extraction.
 
 ### **Phase 3: The "Delta" Dashboard (The "Showcase")**
 
@@ -68,7 +68,7 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 | **Ingestion**        | `undici`, `rss-parser`, `playwright`, `crawl4ai` | Bypassing WAFs/Bot-guards like EconomyNext.                   |
 | **Text Extraction**  | `jsdom`, `@mozilla/readability`, `firecrawl`     | Extracting clean Markdown or JSON from messy HTML.            |
 | **Core AI**          | `groq`                                           | Groq for structured JSON extraction, embeddings, and framing. |
-| **Specialized NLP**  | LLM-first (Groq) / **AgentQL** (Semantic)        | Target-dependent sentiment and semantic element selection.    |
+| **Specialized NLP**  | LLM-first (Groq) / **Stagehand** (Semantic)      | Target-dependent sentiment and semantic element selection.    |
 | **Validation**       | `zod`                                            | Ensuring AI outputs conform to schemas at runtime.            |
 | **Analytics/Search** | `pgvector` (Postgres)                            | High-speed similarity search and vector analytics.            |
 | **UI**               | `Next.js`, `react-plotly.js`                     | Building the "Heatmap of Bias" dashboard.                     |

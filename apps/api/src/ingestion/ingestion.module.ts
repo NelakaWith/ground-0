@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { NewsDiscoveryService } from './news-discovery.service';
 import { ScraperService } from './scraper.service';
 import { ScraperProcessor } from './scraper.processor';
+import { StagehandService } from './stagehand.service';
 import { Queue } from 'bullmq';
 import type { RedisOptions } from 'ioredis';
 
@@ -53,6 +54,7 @@ import type { RedisOptions } from 'ioredis';
     NewsDiscoveryService,
     ScraperService,
     ScraperProcessor,
+    StagehandService,
     {
       /**
        * 'SCRAPE_QUEUE' Provider:
@@ -93,6 +95,6 @@ import type { RedisOptions } from 'ioredis';
    * Export the queue provider so other modules (like a future ScraperModule)
    * can inject it to manage jobs.
    */
-  exports: [BullModule, 'SCRAPE_QUEUE', NewsDiscoveryService],
+  exports: [BullModule, 'SCRAPE_QUEUE', NewsDiscoveryService, StagehandService],
 })
 export class IngestionModule {}
