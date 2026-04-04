@@ -5,16 +5,18 @@ import { Queue } from 'bullmq';
 
 async function main() {
   const app = await NestFactory.createApplicationContext(AppModule);
-  const queue = app.get<Queue>(getQueueToken('scrape'));
+  const scrapeQueue = app.get<Queue>(getQueueToken('scrape'));
+  const analyzeQueue = app.get<Queue>(getQueueToken('analyze'));
 
-  console.log('🧹 Cleaning "scrape" queue...');
-
-  // Removes all jobs that are waiting or delayed
-  await queue.drain();
-  // Removes all jobs in all states (completed, failed, etc.)
-  await queue.obliterate({ force: true });
-
-  console.log('✅ Queue cleaned successfully.');
+  for (const [name, queue] of [
+    ['scrape', scrapeQueue],
+    ['analyze', analyzeQueue],
+  ] as const) {
+    console.log(`🧹 Cleaning "${name}" queue...`);
+    await queue.drain();
+    await queue.obliterate({ force: true });
+    console.log(`✅ "${name}" queue cleaned.`);
+  }
 
   // Close the NestJS app context
   await app.close();

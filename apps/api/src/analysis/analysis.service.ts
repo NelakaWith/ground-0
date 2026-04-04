@@ -2,6 +2,19 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Groq from 'groq-sdk';
 
+// Limit input to ~2500 chars (~600 tokens) — news ledes carry all key info
+const MAX_INPUT_CHARS = 2500;
+
+/** Thrown when Groq returns 429 — carries the required wait time. */
+export class GroqRateLimitError extends Error {
+  constructor(public readonly retryAfterMs: number) {
+    super(
+      `Groq rate limit hit. Retry after ${Math.ceil(retryAfterMs / 1000)}s.`,
+    );
+    this.name = 'GroqRateLimitError';
+  }
+}
+
 @Injectable()
 export class AnalysisService {
   private readonly logger = new Logger(AnalysisService.name);
@@ -15,6 +28,32 @@ export class AnalysisService {
       );
     }
     this.groq = new Groq({ apiKey });
+  }
+
+  /** Parses Groq 429 message ("try again in 21m4.032s") into milliseconds. */
+  private parseRetryAfterMs(error: unknown): number {
+    const msg = error instanceof Error ? error.message : String(error);
+    const match = msg.match(/try again in (?:(\d+)m)?(?:([\d.]+)s)?/);
+    if (match) {
+      const minutes = parseFloat(match[1] ?? '0');
+      const seconds = parseFloat(match[2] ?? '0');
+      return (minutes * 60 + seconds) * 1000;
+    }
+    return 60_000;
+  }
+
+  /** Calls fn(), throws GroqRateLimitError on 429 instead of blocking. */
+  private async callWithRateLimit<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+      return await fn();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('429') || msg.includes('rate_limit_exceeded')) {
+        const retryAfterMs = this.parseRetryAfterMs(error);
+        throw new GroqRateLimitError(retryAfterMs);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -31,28 +70,29 @@ export class AnalysisService {
       const model =
         this.configService.get<string>('GROQ_MODEL') ||
         'llama-3.3-70b-versatile';
-      const response = await this.groq.chat.completions.create({
-        model,
-        messages: [
-          {
-            role: 'system',
-            content: `Identify the primary "Target" (person, entity, or process) and a list of key "Entities" mentioned in the text.
-            Output as JSON with keys "target" (string) and "entities" (array of strings).
-            IMPORTANT: Ensure values are properly escaped JSON strings within the object.`,
-          },
-          { role: 'user', content: text.substring(0, 10000) }, // Limit input to stay in reasonable token bounds
-        ],
-        response_format: { type: 'json_object' },
-      });
+      const response = await this.callWithRateLimit(() =>
+        this.groq.chat.completions.create({
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: `Identify the primary "Target" (person, entity, or process) and key "Entities" in the text. Output JSON: {"target": string, "entities": string[]}`,
+            },
+            { role: 'user', content: text.substring(0, MAX_INPUT_CHARS) },
+          ],
+          response_format: { type: 'json_object' },
+        }),
+      );
 
       const content = response.choices[0]?.message?.content;
       if (!content) throw new Error('Empty response from Groq');
 
       return JSON.parse(content) as { target: string; entities: string[] };
     } catch (error) {
+      if (error instanceof GroqRateLimitError) throw error;
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Error in Pass 1 (Entity Detection): ${message}`);
-      return { target: 'Unknown', entities: [] };
+      throw error;
     }
   }
 
@@ -76,22 +116,19 @@ export class AnalysisService {
       const model =
         this.configService.get<string>('GROQ_MODEL') ||
         'llama-3.3-70b-versatile';
-      const response = await this.groq.chat.completions.create({
-        model,
-        messages: [
-          {
-            role: 'system',
-            content: `Analyze the news text relative to the specific target: "${target}".
-            1. Provide a sentiment score from -1.0 (extremely negative) to 1.0 (extremely positive).
-            2. Extract a list of "Charged Adjectives" or phrases used to describe the target or the situation (e.g., "crippling", "essential", "landmark").
-            3. A brief 1-sentence summary of the framing.
-            Output as JSON with keys "sentimentScore" (number), "chargedAdjectives" (array), and "summary" (string).
-            IMPORTANT: Ensure the "summary" value is a properly escaped JSON string wrapped in double quotes.`,
-          },
-          { role: 'user', content: text.substring(0, 10000) },
-        ],
-        response_format: { type: 'json_object' },
-      });
+      const response = await this.callWithRateLimit(() =>
+        this.groq.chat.completions.create({
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: `Analyze this text relative to target: "${target}". Output JSON: {"sentimentScore": number (-1 to 1), "chargedAdjectives": string[], "summary": string (1 sentence)}`,
+            },
+            { role: 'user', content: text.substring(0, MAX_INPUT_CHARS) },
+          ],
+          response_format: { type: 'json_object' },
+        }),
+      );
 
       const content = response.choices[0]?.message?.content;
       if (!content) throw new Error('Empty response from Groq');
@@ -102,13 +139,10 @@ export class AnalysisService {
         summary: string;
       };
     } catch (error) {
+      if (error instanceof GroqRateLimitError) throw error;
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Error in Pass 2 (Framing Extraction): ${message}`);
-      return {
-        sentimentScore: 0,
-        chargedAdjectives: [],
-        summary: 'Analysis failed',
-      };
+      throw error;
     }
   }
 }

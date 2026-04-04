@@ -1,11 +1,9 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  Stagehand,
-  type ModelConfiguration,
-  type Page,
-  type V3Options,
-} from '@browserbasehq/stagehand';
+
+// Use a dynamic import for ESM-only modules in Test/Node environment
+// This prevents Jest from statically analyzing and failing on the export/import syntax
+let Stagehand: any;
 
 @Injectable()
 export class StagehandService implements OnModuleDestroy {
@@ -14,34 +12,48 @@ export class StagehandService implements OnModuleDestroy {
   constructor(private readonly config: ConfigService) {}
 
   /**
+   * Lazy-load Stagehand class to avoid ESM parsing issues during startup/testing.
+   */
+  private async getStagehandClass() {
+    if (!Stagehand) {
+      const module = await import('@browserbasehq/stagehand');
+      Stagehand = module.Stagehand;
+    }
+    return Stagehand;
+  }
+
+  /**
    * Create a new Stagehand session for browser automation.
    * Uses local Chrome with Groq API for vision-based page understanding.
    * Set GROQ_API_KEY and STAGEHAND_MODEL in environment.
    */
-  private async createSession(): Promise<Stagehand> {
+  private async createSession(): Promise<any> {
+    const StagehandClass = await this.getStagehandClass();
     const modelName =
       this.config.get<string>('STAGEHAND_MODEL') ??
       'groq-llama-3.3-70b-versatile';
-    const model: ModelConfiguration = {
+    const model: any = {
       modelName,
       apiKey: this.config.get<string>('GROQ_API_KEY') ?? undefined,
     };
 
-    const options: V3Options = {
+    const options: any = {
       env: 'LOCAL',
       localBrowserLaunchOptions: {
         headless: true,
+        executablePath:
+          process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined,
       },
       model,
     };
 
-    const stagehand = new Stagehand(options);
+    const stagehand = new StagehandClass(options);
 
     await stagehand.init();
     return stagehand;
   }
 
-  private getActivePage(stagehand: Stagehand): Page {
+  private getActivePage(stagehand: any): any {
     const page = stagehand.context.activePage() ?? stagehand.context.pages()[0];
     if (!page) {
       throw new Error('Stagehand context has no active page');
@@ -49,7 +61,7 @@ export class StagehandService implements OnModuleDestroy {
     return page;
   }
 
-  private async hydratePage(stagehand: Stagehand, page: Page): Promise<void> {
+  private async hydratePage(stagehand: any, page: any): Promise<void> {
     // A short scroll/wait loop to trigger lazy content and hydration.
     for (let i = 0; i < 3; i += 1) {
       this.logger.log(`🤖 Stagehand: Scroll-Hydrate iteration ${i + 1}/3...`);
@@ -66,7 +78,7 @@ export class StagehandService implements OnModuleDestroy {
    * @returns Full article text, or null if extraction fails
    */
   async extractArticle(url: string): Promise<string | null> {
-    let stagehand: Stagehand | null = null;
+    let stagehand: any | null = null;
     this.logger.log(`🤖 Stagehand: Starting extraction for ${url}`);
 
     try {
@@ -134,7 +146,7 @@ export class StagehandService implements OnModuleDestroy {
    * @returns Result of the agent execution
    */
   async navigateAndExtract(url: string, task: string): Promise<string | null> {
-    let stagehand: Stagehand | null = null;
+    let stagehand: any | null = null;
 
     try {
       stagehand = await this.createSession();

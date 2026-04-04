@@ -1,24 +1,52 @@
-import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
-import { Inject, Logger } from '@nestjs/common';
-import { Job } from 'bullmq';
-import { AnalysisService } from './analysis.service';
-import { eq } from 'drizzle-orm';
+import {
+  Processor,
+  WorkerHost,
+  OnWorkerEvent,
+  InjectQueue,
+} from '@nestjs/bullmq';
+import { Inject, Logger, OnModuleInit } from '@nestjs/common';
+import { Job, Queue, DelayedError } from 'bullmq';
+import { AnalysisService, GroqRateLimitError } from './analysis.service';
+import { eq, inArray } from 'drizzle-orm';
 import { articles } from '../db/schema';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../db/schema';
 
 @Processor('analyze')
-export class AnalysisProcessor extends WorkerHost {
+export class AnalysisProcessor extends WorkerHost implements OnModuleInit {
   private readonly logger = new Logger(AnalysisProcessor.name);
 
   constructor(
     private readonly analysisService: AnalysisService,
     @Inject('DRIZZLE_DB') private readonly db: NeonHttpDatabase<typeof schema>,
+    @InjectQueue('analyze') private readonly analyzeQueue: Queue,
   ) {
     super();
   }
 
-  async process(job: Job<{ articleId: string }>): Promise<any> {
+  async onModuleInit() {
+    const pending = await this.db
+      .select({ id: articles.id })
+      .from(articles)
+      .where(inArray(articles.processingStatus, ['scraped', 'failed']));
+
+    if (pending.length === 0) return;
+
+    this.logger.log(
+      `Re-queuing ${pending.length} article(s) pending analysis...`,
+    );
+    for (const { id } of pending) {
+      await this.analyzeQueue
+        .add(
+          'analyze',
+          { articleId: id },
+          { jobId: `requeue-${id}`, removeOnComplete: true },
+        )
+        .catch(() => {}); // ignore duplicate jobId errors
+    }
+  }
+
+  async process(job: Job<{ articleId: string }>, token?: string): Promise<any> {
     const { articleId } = job.data;
     this.logger.log(`🧬 Starting Analysis for article: ${articleId}`);
 
@@ -84,8 +112,20 @@ export class AnalysisProcessor extends WorkerHost {
         sentiment: pass2.sentimentScore,
       };
     } catch (error) {
+      if (error instanceof GroqRateLimitError) {
+        this.logger.warn(
+          `⏳ Rate limited for ${articleId}. Rescheduling in ${Math.ceil(error.retryAfterMs / 1000)}s.`,
+        );
+        await job.moveToDelayed(Date.now() + error.retryAfterMs, token);
+        throw new DelayedError();
+      }
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`🛑 Analysis failed for ${articleId}: ${message}`);
+      await this.db
+        .update(articles)
+        .set({ processingStatus: 'failed', updatedAt: new Date() })
+        .where(eq(articles.id, articleId))
+        .catch(() => {});
       throw error;
     }
   }
@@ -96,7 +136,7 @@ export class AnalysisProcessor extends WorkerHost {
   }
 
   @OnWorkerEvent('completed')
-  onCompleted(job: Job) {
+  onCompleted(job: Job<{ articleId: string }>) {
     this.logger.log(
       `🏁 Pipeline Complete: Analysis finished for article: ${job.data.articleId}`,
     );

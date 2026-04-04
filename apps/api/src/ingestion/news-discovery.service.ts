@@ -2,12 +2,30 @@ import { Injectable, Inject, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import type ParserType from 'rss-parser';
 import * as ParserNS from 'rss-parser';
-import { diceCoefficient } from 'dice-coefficient';
 import { eq } from 'drizzle-orm';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../db/schema';
 import providers from '../feed/providers';
 import type { Queue } from 'bullmq';
+
+// Manual dice coefficient implementation to avoid ESM/Jest import issues
+function diceCoefficient(a: string, b: string): number {
+  if (a === b) return 1;
+  const getBigrams = (str: string) => {
+    const bigrams = new Set<string>();
+    for (let i = 0; i < str.length - 1; i++) {
+      bigrams.add(str.substring(i, i + 2));
+    }
+    return bigrams;
+  };
+  const bigramsA = getBigrams(a.toLowerCase());
+  const bigramsB = getBigrams(b.toLowerCase());
+  let intersect = 0;
+  for (const bigram of bigramsA) {
+    if (bigramsB.has(bigram)) intersect++;
+  }
+  return (2 * intersect) / (bigramsA.size + bigramsB.size);
+}
 
 /**
  * NewsDiscoveryService handles the initial polling of RSS feeds.
@@ -93,8 +111,7 @@ export class NewsDiscoveryService implements OnModuleInit {
         const count = (feed.items && feed.items.length) || 0;
         this.logger.log(`Fetched ${p.name} — ${count} items`);
 
-        // ! Limit to 3 stories per outlet for now for testing and to avoid overloading the scraper in early phases.
-        const itemsToProcess = (feed.items || []).slice(0, 3);
+        const itemsToProcess = feed.items || [];
 
         for (const item of itemsToProcess) {
           if (!item.link || !item.title) continue;

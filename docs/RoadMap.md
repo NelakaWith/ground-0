@@ -84,3 +84,14 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 
 - [x] Start the Nest API (apps/api) in dev mode and verify `GET /providers` returns the canonical list.
 - [x] Enqueue a single scrape job or call `/fetch?source=<id>` to validate the ScraperService and Readability extraction.
+
+### **Phase 5: Agentic Deep Digging (The "Knowledge Moat")**
+
+- [ ] **Goal:** Transform the platform into an autonomous investigative engine that "hunts" for hidden data and omissions.
+
+- [ ] **Agentic Cross-Referencing:** Trigger a dedicated **Stagehand** `agent()` only when an "Event Cluster" (multiple sources on one target) is identified.
+  - **Fact Extraction:** If Source A mentions a "15% tax" but Source B only says "new taxes," the agent investigates Source B's archives or linked documents specifically to find the missing statistic.
+  - **The "Omission Alert" Logic:** Cross-verify key entities and figures across the cluster to programmatically highlight what each source is "choosing" not to report.
+- [ ] **Historical Narrative Auditing:** Dispatch agents to navigate complex media archives (E-Papers) to find 2-year historical baselines for current political figures.
+  - **The "Narrative Flip-Flop":** Identify when an outlet's framing of the same person/policy has shifted 180 degrees over time (e.g., from "Visionary Leader" to "Fringe Politician").
+- [ ] **YC Angle:** This is your **Proprietary Data Moat.** You are building a system that doesn't just read the news; it _audits_ it against history and competing versions of the truth, creating an "investigative as a service" layer.
