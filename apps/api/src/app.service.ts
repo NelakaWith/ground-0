@@ -116,7 +116,7 @@ export class AppService implements OnModuleInit {
       isIdle,
       message: isIdle
         ? '🏁 All pipelines completed. All found articles have been processed.'
-        : '🏗️ Pipeline is still active. There are articles waiting to be scraped or analyzed.',
+        : '🏃‍➡️ Pipeline is still active. There are articles waiting to be scraped or analyzed.',
     };
   }
 }

@@ -52,6 +52,7 @@ export class StagehandService implements OnModuleDestroy {
   private async hydratePage(stagehand: Stagehand, page: Page): Promise<void> {
     // A short scroll/wait loop to trigger lazy content and hydration.
     for (let i = 0; i < 3; i += 1) {
+      this.logger.log(`🤖 Stagehand: Scroll-Hydrate iteration ${i + 1}/3...`);
       await stagehand.act('Scroll to the bottom of the page');
       await page.waitForTimeout(1500);
     }
@@ -66,24 +67,30 @@ export class StagehandService implements OnModuleDestroy {
    */
   async extractArticle(url: string): Promise<string | null> {
     let stagehand: Stagehand | null = null;
+    this.logger.log(`🤖 Stagehand: Starting extraction for ${url}`);
 
     try {
+      this.logger.log(`🤖 Stagehand: Initializing browser session...`);
       stagehand = await this.createSession();
       const page = this.getActivePage(stagehand);
 
       // Navigate to the URL
+      this.logger.log(`🤖 Stagehand: Navigating to ${url}`);
       await page.goto(url, {
         waitUntil: 'domcontentloaded',
         timeoutMs: 30000,
       });
 
       // Let page settle (hydration, lazy-loaded content)
+      this.logger.log(`🤖 Stagehand: Waiting for page to settle...`);
       await page.waitForTimeout(2000);
 
       // Scroll to trigger any lazy-loaded content
+      this.logger.log(`🤖 Stagehand: Hydrating page (scroll loop)...`);
       await this.hydratePage(stagehand, page);
 
       // Extract the full article body using vision + LLM
+      this.logger.log(`🤖 Stagehand: Extracting content via AI Vision...`);
       const result = await stagehand.extract(
         'Extract the complete article text from this page, including all paragraphs, quotes, and important details. Ignore navigation, ads, and comments.',
       );
@@ -92,7 +99,7 @@ export class StagehandService implements OnModuleDestroy {
 
       if (content) {
         this.logger.log(
-          `✓ Stagehand extraction successful for ${url} (${content.length} chars)`,
+          `✅ Stagehand: Extraction successful for ${url} (${content.length} chars)`,
         );
       }
       return content;
