@@ -12,7 +12,9 @@ import { articles } from '../db/schema';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../db/schema';
 
-@Processor('analyze')
+@Processor('analyze', {
+  limiter: { max: 10, duration: 60_000 }, // max 10 jobs/min → 20 Groq calls/min (2 per job), safely under the 30 req/min limit
+})
 export class AnalysisProcessor extends WorkerHost implements OnModuleInit {
   private readonly logger = new Logger(AnalysisProcessor.name);
 
