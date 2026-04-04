@@ -2,8 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Groq from 'groq-sdk';
 
-// Limit input to ~2500 chars (~600 tokens) — news ledes carry all key info
-const MAX_INPUT_CHARS = 2500;
+// Limit input to ~1500 chars (~375 tokens) — enough for clean article content
+const MAX_INPUT_CHARS = 1500;
 
 /** Thrown when Groq returns 429 — carries the required wait time. */
 export class GroqRateLimitError extends Error {

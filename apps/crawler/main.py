@@ -12,12 +12,32 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+# Try to import content filtering (available in crawl4ai >=0.4.x)
+try:
+    from crawl4ai.content_filter_strategy import PruningContentFilter
+    from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
+    _HAS_CONTENT_FILTER = True
+except ImportError:
+    _HAS_CONTENT_FILTER = False
+
 load_dotenv()
 
 class _CrawlResult(Protocol):
     """Minimal protocol matching crawl4ai's CrawlResult."""
-    markdown: str
+    markdown: Any  # str in 0.3.x, MarkdownGenerationResult in 0.4.x
     html: str
+
+
+def _extract_markdown(result: _CrawlResult) -> str:
+    """Extract the best available markdown from a CrawlResult, across API versions."""
+    md = result.markdown
+    # 0.4.x: markdown is a MarkdownGenerationResult object
+    if hasattr(md, 'fit_markdown') and md.fit_markdown:
+        return md.fit_markdown
+    if hasattr(md, 'raw_markdown'):
+        return md.raw_markdown
+    # 0.3.x: markdown is a plain string
+    return md or ""
 
 
 # Global crawler instance
@@ -60,6 +80,14 @@ app = FastAPI(title="Crawl4AI Microservice", version="0.1.0", lifespan=lifespan)
 
 async def _arun(url: str, **kwargs: Any) -> _CrawlResult:
     """Typed wrapper around arun to bypass AsyncGenerator stubs."""
+    # Use PruningContentFilter for article-only extraction when available (crawl4ai >=0.4.x)
+    if _HAS_CONTENT_FILTER:
+        kwargs.setdefault(
+            'markdown_generator',
+            DefaultMarkdownGenerator(
+                content_filter=PruningContentFilter(threshold=0.45, threshold_type="fixed")
+            )
+        )
     return await crawler.arun(url, **kwargs)  # type: ignore[misc, return-value]
 
 
@@ -95,7 +123,7 @@ async def crawl(request: CrawlRequest) -> CrawlResponse:
 
         return CrawlResponse(
             url=request.url,
-            markdown=result.markdown,
+            markdown=_extract_markdown(result),
             raw_html=result.html,
             success=True,
             error=None,
