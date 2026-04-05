@@ -7,6 +7,27 @@ import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../db/schema';
 import { eq } from 'drizzle-orm';
 
+/**
+ * Strips markdown noise (nav links, images, short link-only lines),
+ * leaving only prose paragraphs before saving to DB.
+ */
+function cleanContent(raw: string): string {
+  return raw
+    .split('\n')
+    .map((line) =>
+      line
+        .replace(/!\[.*?\]\(.*?\)/g, '')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .trim(),
+    )
+    .filter((line) => {
+      if (line.length < 40) return false;
+      if ((line.match(/https?:\/\//g) || []).length > 1) return false;
+      return true;
+    })
+    .join('\n');
+}
+
 interface ScrapeJobData {
   link: string;
   providerId: string;
@@ -80,7 +101,7 @@ export class ScraperProcessor extends WorkerHost {
       const result = await this.db
         .update(schema.articles)
         .set({
-          content,
+          content: cleanContent(content),
           updatedAt: new Date(),
           processingStatus: 'scraped',
           isSnippet: content.length < 500 ? 'true' : 'false', // basic heuristic

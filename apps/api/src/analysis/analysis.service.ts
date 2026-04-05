@@ -78,7 +78,10 @@ export class AnalysisService {
               role: 'system',
               content: `Identify the primary "Target" (person, entity, or process) and key "Entities" in the text. Output JSON: {"target": string, "entities": string[]}`,
             },
-            { role: 'user', content: text.substring(0, MAX_INPUT_CHARS) },
+            {
+              role: 'user',
+              content: text.substring(0, MAX_INPUT_CHARS),
+            },
           ],
           response_format: { type: 'json_object' },
         }),
@@ -124,7 +127,10 @@ export class AnalysisService {
               role: 'system',
               content: `Analyze this text relative to target: "${target}". Output JSON: {"sentimentScore": number (-1 to 1), "chargedAdjectives": string[], "summary": string (1 sentence)}`,
             },
-            { role: 'user', content: text.substring(0, MAX_INPUT_CHARS) },
+            {
+              role: 'user',
+              content: text.substring(0, MAX_INPUT_CHARS),
+            },
           ],
           response_format: { type: 'json_object' },
         }),
