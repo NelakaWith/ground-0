@@ -6,6 +6,7 @@ import { NewsDiscoveryService } from './news-discovery.service';
 import { ScraperService } from './scraper.service';
 import { ScraperProcessor } from './scraper.processor';
 import { StagehandService } from './stagehand.service';
+import { AnalysisModule } from '../analysis/analysis.module';
 import { Queue } from 'bullmq';
 import type { RedisOptions } from 'ioredis';
 
@@ -17,6 +18,7 @@ import type { RedisOptions } from 'ioredis';
   imports: [
     /** Register the ScheduleModule to enable CRON-based discovery tasks. */
     ScheduleModule.forRoot(),
+    AnalysisModule,
     /**
      * Register the BullModule with a 'scrape' queue definition.
      * This allows the module to manage and inject the 'scrape' queue using NestJS patterns.
