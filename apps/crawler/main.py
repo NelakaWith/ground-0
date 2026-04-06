@@ -85,9 +85,18 @@ async def _arun(url: str, **kwargs: Any) -> _CrawlResult:
         kwargs.setdefault(
             'markdown_generator',
             DefaultMarkdownGenerator(
-                content_filter=PruningContentFilter(threshold=0.45, threshold_type="fixed")
+                content_filter=PruningContentFilter(
+                    threshold=0.45, 
+                    threshold_type="dynamic",
+                    min_word_threshold=30
+                )
             )
         )
+    
+    # Exclude common noisy sections entirely
+    kwargs.setdefault('excluded_tags', ['nav', 'footer', 'header', 'aside', 'script', 'style', 'noscript', 'form', 'iframe', 'svg'])
+    kwargs.setdefault('remove_overlay_elements', True)
+    
     return await crawler.arun(url, **kwargs)  # type: ignore[misc, return-value]
 
 

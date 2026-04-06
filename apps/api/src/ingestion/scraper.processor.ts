@@ -3,6 +3,7 @@ import { Inject, Logger } from '@nestjs/common';
 import { Job, Queue } from 'bullmq';
 import { ScraperService } from './scraper.service';
 import { StagehandService } from './stagehand.service';
+import { AnalysisService } from '../analysis/analysis.service';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../db/schema';
 import { eq } from 'drizzle-orm';
@@ -46,6 +47,7 @@ export class ScraperProcessor extends WorkerHost {
   constructor(
     private readonly scraperService: ScraperService,
     private readonly stagehandService: StagehandService,
+    private readonly analysisService: AnalysisService,
     @Inject('DRIZZLE_DB') private readonly db: NeonHttpDatabase<typeof schema>,
     @InjectQueue('analyze') private readonly analyzeQueue: Queue,
   ) {
@@ -97,11 +99,14 @@ export class ScraperProcessor extends WorkerHost {
         return { success: false, reason: 'no_content_extracted' };
       }
 
-      // Step 2: Update the 'articles' record in Postgres with the extracted text
+      // Step 2: AI-powered refinement to strip noise
+      const refinedContent = await this.analysisService.refineContent(content);
+
+      // Step 3: Update database with refined text
       const result = await this.db
         .update(schema.articles)
         .set({
-          content: cleanContent(content),
+          content: refinedContent || cleanContent(content), // Fallback if AI fails
           updatedAt: new Date(),
           processingStatus: 'scraped',
           isSnippet: content.length < 500 ? 'true' : 'false', // basic heuristic
