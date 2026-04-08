@@ -7,7 +7,7 @@ import {
 import { Inject, Logger, OnModuleInit } from '@nestjs/common';
 import { Job, Queue, DelayedError } from 'bullmq';
 import { AnalysisService, GroqRateLimitError } from './analysis.service';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, and, lt } from 'drizzle-orm';
 import { articles } from '../db/schema';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../db/schema';
@@ -27,10 +27,19 @@ export class AnalysisProcessor extends WorkerHost implements OnModuleInit {
   }
 
   async onModuleInit() {
+    // Only recover jobs that are in 'scraped' status AND haven't been updated in 30 minutes.
+    // This prevents re-enqueuing active jobs on every dev server restart.
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+
     const pending = await this.db
       .select({ id: articles.id })
       .from(articles)
-      .where(inArray(articles.processingStatus, ['scraped', 'failed']));
+      .where(
+        and(
+          eq(articles.processingStatus, 'scraped'),
+          lt(articles.updatedAt, thirtyMinutesAgo),
+        ),
+      );
 
     if (pending.length === 0) return;
 

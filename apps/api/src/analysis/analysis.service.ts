@@ -4,8 +4,8 @@ import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Limit input to ~1500 chars (~375 tokens) — enough for clean article content
-const MAX_INPUT_CHARS = 1500;
-const MAX_REFINE_CHARS = 10000;
+const MAX_INPUT_CHARS = 2500;
+const MAX_REFINE_CHARS = 20000;
 
 /** Thrown when Groq returns 429 — carries the required wait time. */
 export class GroqRateLimitError extends Error {
@@ -96,15 +96,22 @@ export class AnalysisService {
    * @param {string} rawMarkdown - The raw markdown extracted by the crawler.
    * @returns {Promise<string>} The refined, clean article content.
    */
-  async refineContent(rawMarkdown: string): Promise<string> {
+  async refineContent(
+    rawMarkdown: string,
+    expectedTitle: string,
+  ): Promise<string> {
     const systemPrompt = `You are an expert news editor. Your task is to extract the main article text and title from a messy markdown source.
+The article you are looking for is titled: "${expectedTitle}".
+
 Rules:
 1. REMOVE all navigation links, social media widgets, related news lists, and ads.
 2. REMOVE copyright notices, comment section guidelines, and site footers.
 3. FIX any broken formatting or concatenated text that wasn't properly spaced.
-4. Output ONLY the clean article title and the body prose in Markdown format.
-5. If there are multiple articles or live updates, ONLY extract the primary one relevant to the title.
-Do NOT include any preamble or extra text. Just the cleaned article.`;
+4. Output ONLY the clean article title and the body prose matching the expected title in Markdown format.
+5. If there are multiple articles or lists of "Top Stories/Related News", IGNORE them and ONLY extract the primary story.
+6. CRITICAL: If you cannot find a substantial article matching "${expectedTitle}" in the provided text, output exactly: [NO_ARTICLE_CONTENT_FOUND].
+   Do NOT output placeholders, templates, or messages like "This is a placeholder".
+Do NOT include any preamble or extra text. Just the cleaned article or the error token.`;
 
     try {
       const content = await this.executeCompletion(

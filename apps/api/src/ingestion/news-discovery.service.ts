@@ -8,24 +8,7 @@ import * as schema from '../db/schema';
 import providers from '../feed/providers';
 import type { Queue } from 'bullmq';
 
-// Manual dice coefficient implementation to avoid ESM/Jest import issues
-function diceCoefficient(a: string, b: string): number {
-  if (a === b) return 1;
-  const getBigrams = (str: string) => {
-    const bigrams = new Set<string>();
-    for (let i = 0; i < str.length - 1; i++) {
-      bigrams.add(str.substring(i, i + 2));
-    }
-    return bigrams;
-  };
-  const bigramsA = getBigrams(a.toLowerCase());
-  const bigramsB = getBigrams(b.toLowerCase());
-  let intersect = 0;
-  for (const bigram of bigramsA) {
-    if (bigramsB.has(bigram)) intersect++;
-  }
-  return (2 * intersect) / (bigramsA.size + bigramsB.size);
-}
+import { diceCoefficient } from '../utils/similarity.util';
 
 /**
  * NewsDiscoveryService handles the initial polling of RSS feeds.
