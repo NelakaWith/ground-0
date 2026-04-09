@@ -1,4 +1,4 @@
-import { Controller, Get, Post } from '@nestjs/common';
+import { Controller, Get, Post, Query } from '@nestjs/common';
 import { AppService } from './app.service';
 import { NewsDiscoveryService } from './ingestion/news-discovery.service';
 import providers from './feed/providers';
@@ -17,14 +17,12 @@ export class AppController {
 
   @Post('fetch')
   async triggerFetch() {
-    // Manually trigger the discovery sync
     void this.newsDiscoveryService.handleCron();
     return { status: 'Discovery triggered successfully' };
   }
 
   @Post('recover')
   async triggerRecovery() {
-    // True recovery logic to re-dequeue stuck articles
     const result = await this.appService.recoverStuckArticles();
     return { status: 'Recovery cycle triggered', detail: result };
   }
@@ -37,5 +35,10 @@ export class AppController {
   @Get('providers')
   getProviders() {
     return providers;
+  }
+
+  @Get('articles')
+  async getArticles(@Query('status') status?: string) {
+    return this.appService.getArticles(status);
   }
 }

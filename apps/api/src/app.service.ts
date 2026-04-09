@@ -1,7 +1,7 @@
 import { Injectable, Inject, Logger, OnModuleInit } from '@nestjs/common';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from './db/schema';
-import { sql, and, lt } from 'drizzle-orm';
+import { sql, and, lt, desc, eq } from 'drizzle-orm';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 
@@ -118,5 +118,20 @@ export class AppService implements OnModuleInit {
         ? '🏁 All pipelines completed. All found articles have been processed.'
         : '🏃‍➡️ Pipeline is still active. There are articles waiting to be scraped or analyzed.',
     };
+  }
+
+  async getArticles(status?: string) {
+    const query = this.db
+      .select()
+      .from(schema.articles)
+      .limit(50)
+      .orderBy(desc(schema.articles.pubDate));
+
+    if (status) {
+      // @ts-ignore - checking if status matches schema
+      query.where(eq(schema.articles.processingStatus, status));
+    }
+
+    return query;
   }
 }
