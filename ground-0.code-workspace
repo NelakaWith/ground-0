@@ -2,6 +2,7 @@
   "folders": [
     {
       "path": ".",
+      "name": "root",
     },
     {
       "path": "apps/api",
@@ -10,6 +11,10 @@
     {
       "path": "apps/crawler",
       "name": "crawler",
+    },
+    {
+      "path": "apps/client",
+      "name": "client",
     },
   ],
   "settings": {
