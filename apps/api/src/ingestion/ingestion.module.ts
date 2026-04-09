@@ -5,6 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { NewsDiscoveryService } from './news-discovery.service';
 import { ScraperService } from './scraper.service';
 import { ScraperProcessor } from './scraper.processor';
+import { StagehandService } from './stagehand.service';
+import { AnalysisModule } from '../analysis/analysis.module';
 import { Queue } from 'bullmq';
 import type { RedisOptions } from 'ioredis';
 
@@ -16,6 +18,7 @@ import type { RedisOptions } from 'ioredis';
   imports: [
     /** Register the ScheduleModule to enable CRON-based discovery tasks. */
     ScheduleModule.forRoot(),
+    AnalysisModule,
     /**
      * Register the BullModule with a 'scrape' queue definition.
      * This allows the module to manage and inject the 'scrape' queue using NestJS patterns.
@@ -29,12 +32,31 @@ import type { RedisOptions } from 'ioredis';
         },
       }),
     }),
-    BullModule.registerQueue({ name: 'scrape' }),
+    BullModule.registerQueue(
+      {
+        name: 'scrape',
+        defaultJobOptions: {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 5000 },
+          removeOnComplete: true,
+          removeOnFail: false,
+        },
+      },
+      {
+        name: 'analyze',
+        defaultJobOptions: {
+          attempts: 2,
+          backoff: { type: 'fixed', delay: 10000 },
+          removeOnComplete: true,
+        },
+      },
+    ),
   ],
   providers: [
     NewsDiscoveryService,
     ScraperService,
     ScraperProcessor,
+    StagehandService,
     {
       /**
        * 'SCRAPE_QUEUE' Provider:
@@ -75,6 +97,6 @@ import type { RedisOptions } from 'ioredis';
    * Export the queue provider so other modules (like a future ScraperModule)
    * can inject it to manage jobs.
    */
-  exports: ['SCRAPE_QUEUE'],
+  exports: [BullModule, 'SCRAPE_QUEUE', NewsDiscoveryService, StagehandService],
 })
 export class IngestionModule {}

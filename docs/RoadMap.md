@@ -4,7 +4,7 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 
 ### **Phase 1: The Robust Ingestion Engine (The "Hustle")**
 
-- [ ] **Goal:** Establish a 100% reliable, de-duplicated data stream from Sri Lankan media using a stepped queue pipeline.
+- [x] **Goal:** Establish a 100% reliable, de-duplicated data stream from Sri Lankan media using a stepped queue pipeline.
 
 - [x] **Infrastructure:** \* `undici` (HTTP client) with Chrome/120 headers; fallback to `playwright` (Chromium) for JS-heavy pages and challenge solving.
 
@@ -19,29 +19,30 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
   - [x] Setting up Drizzle ORM and Article Schema.
   - [x] Discovery: Insert new article metadata (checks for existing URLs).
   - [x] Scraper: Update article with full text and quality flags (`is_snippet`, `is_paywalled`).
-  - Analysis: Update article with LLM results; sync embeddings to `pgvector`.
+  - [x] Analysis: Update article with LLM results; sync embeddings with `pgvector` (Next step).
 - [ ] **YC Angle:** This shows "resourcefulness.” You aren't just using a standard library; you're actively overcoming local technical hurdles (WAFs/Cloudflare).
 
 ### **Phase 2: The Intelligence Hybrid (The "Brain")**
 
-- [ ] **Goal:** Move from general sentiment to "target-dependent” bias.
+- [x] **Goal:** Move from general sentiment to "target-dependent” bias.
 
-- [ ] **Strategy: English-First Focus**
+- [x] **Strategy: English-First Focus**
   - Temporarily exclude Sinhala/Tamil and TV sources to focus on high-fidelity English text extraction. This ensures the LLM (Groq) has the cleanest possible context for the "Quantum of Utility" demo.
 
-- [ ] **The "Double-Pass" Analysis:**
-  - [ ] **Pass 1 (Entity Detection):** Use `groq` to identify the "Target" of the news (e.g., "The President," "The JVP," "The Central Bank").
-  - [ ] **Pass 2 (Sentiment Score):** Pipe that specific target into an LLM-first pipeline (Groq or an optional specialized inference model) to produce target-specific sentiment scores and charged-adjective lists.
-- [ ] **Framing Extraction:** Use `groq` to extract **"Charged Adjectives."**
-  - [ ] _State Media:_ "The necessary economic adjustment..."
-  - [ ] _Private Media:_ "The crippling tax hike..."
+- [x] **The "Double-Pass" Analysis:**
+  - [x] **Pass 1 (Entity Detection):** Use `groq` to identify the "Target" of the news (e.g., "The President," "The JVP," "The Central Bank").
+  - [x] **Pass 2 (Sentiment Score):** Pipe that specific target into an LLM-first pipeline (Groq or an optional specialized inference model) to produce target-specific sentiment scores and charged-adjective lists.
+- [x] **Framing Extraction:** Use `groq` to extract **"Charged Adjectives."**
+  - [x] _State Media:_ "The necessary economic adjustment..."
+  - [x] _Private Media:_ "The crippling tax hike..."
 - [ ] **YC Angle:** This demonstrates "technical depth.” You aren't just "wrapping an API"; you're building a multi-stage pipeline that combines LLM reasoning with deterministic NLP where needed.
 
 - [x] **Scraper details:** Use a Playwright `ScraperService` (worker) that consumes jobs from `bullmq`, renders pages with `route.abort()` for non-HTML assets, extracts HTML, runs `@mozilla/readability` for the article body, then forwards content to the Analysis service.
-- [ ] **Technical Dredging:** For snippet-only or paywalled sources (e.g., electronic media, paywalled papers), implement fallback logic:
-  - Use article titles to find AMP versions or Social Media metadata (OpenGraph).
-  - **Print-Edition Discovery:** Automatically navigate to "Today's Paper" or "E-Paper" archive links to extract a considerable substance of the news (often bypassing web-snippet/paywall limitations), even if not always the full 100% text.
-  - **Auto-Scroll & Hydration:** Implement active page interaction (scrolling, clicking "read more") in Playwright to trigger JS-heavy content loading for recalcitrant sites.
+- [x] **Technical Dredging & AI Browsing (Stagehand):** For snippet-only, paywalled, or highly-protected sources (e.g., EconomyNext, Daily Mirror):
+  - **AI-Driven Fallback:** Integrate **Crawl4AI** as a secondary ingestion layer for WAF/bot-guarded sources.
+  - **Agentic Interaction:** Use **Stagehand** `agent()` to handle multi-step navigation ("Today's Paper" archives, "Read More" hydration).
+  - **Print-Edition Discovery:** Use **Stagehand** `agent()` to navigate E-Paper archives and extract article links/content.
+  - **Auto-Scroll & Hydration:** Use **Stagehand** scroll + wait loop to trigger lazy-loaded content before extraction.
 
 ### **Phase 3: The "Delta" Dashboard (The "Showcase")**
 
@@ -62,18 +63,18 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 
 ### **Libraries & Tools Master List**
 
-| **Layer**            | **Tools**                                       | **Purpose**                                                   |
-| -------------------- | ----------------------------------------------- | ------------------------------------------------------------- |
-| **Ingestion**        | `undici`, `rss-parser`, `playwright`            | Bypassing WAFs and parsing RSS/Atom feeds.                    |
-| **Text Extraction**  | `jsdom`, `@mozilla/readability`, `unfluff`      | Extracting full article text for better LLM context.          |
-| **Core AI**          | `groq`                                          | Groq for structured JSON extraction, embeddings, and framing. |
-| **Specialized NLP**  | LLM-first pipeline (Groq) / Hugging Face        | Target-dependent sentiment and framing extraction.            |
-| **Validation**       | `zod`                                           | Ensuring AI outputs conform to schemas at runtime.            |
-| **Analytics/Search** | `pgvector` (Postgres)                           | High-speed similarity search and vector analytics.            |
-| **UI**               | `Next.js`, `react-plotly.js`                    | Building the "Heatmap of Bias" dashboard.                     |
-| **Orchestration**    | `NestJS`, `@nestjs/schedule`, `bullmq`, `redis` | Scheduler, API, and durable job queues.                       |
-| **DB / ORM**         | `pg`, `pgvector`, `drizzle-orm`                 | Postgres with vector extension and lightweight ORM.           |
-| **Scraping**         | `playwright`, `undici`, `rss-parser`            | Rendering fallback, fast HTTP fetches, and feed parsing.      |
+| **Layer**            | **Tools**                                        | **Purpose**                                                   |
+| -------------------- | ------------------------------------------------ | ------------------------------------------------------------- |
+| **Ingestion**        | `undici`, `rss-parser`, `playwright`, `crawl4ai` | Bypassing WAFs/Bot-guards like EconomyNext.                   |
+| **Text Extraction**  | `jsdom`, `@mozilla/readability`, `firecrawl`     | Extracting clean Markdown or JSON from messy HTML.            |
+| **Core AI**          | `groq`                                           | Groq for structured JSON extraction, embeddings, and framing. |
+| **Specialized NLP**  | LLM-first (Groq) / **Stagehand** (Semantic)      | Target-dependent sentiment and semantic element selection.    |
+| **Validation**       | `zod`                                            | Ensuring AI outputs conform to schemas at runtime.            |
+| **Analytics/Search** | `pgvector` (Postgres)                            | High-speed similarity search and vector analytics.            |
+| **UI**               | `Next.js`, `react-plotly.js`                     | Building the "Heatmap of Bias" dashboard.                     |
+| **Orchestration**    | `NestJS`, `@nestjs/schedule`, `bullmq`, `redis`  | Scheduler, API, and durable job queues.                       |
+| **DB / ORM**         | `pg`, `pgvector`, `drizzle-orm`                  | Postgres with vector extension and lightweight ORM.           |
+| **Scraping**         | `playwright`, `undici`, `rss-parser`             | Rendering fallback, fast HTTP fetches, and feed parsing.      |
 
 ### **Immediate 48-Hour Sprint**
 
@@ -83,3 +84,14 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 
 - [x] Start the Nest API (apps/api) in dev mode and verify `GET /providers` returns the canonical list.
 - [x] Enqueue a single scrape job or call `/fetch?source=<id>` to validate the ScraperService and Readability extraction.
+
+### **Phase 5: Agentic Deep Digging (The "Knowledge Moat")**
+
+- [ ] **Goal:** Transform the platform into an autonomous investigative engine that "hunts" for hidden data and omissions.
+
+- [ ] **Agentic Cross-Referencing:** Trigger a dedicated **Stagehand** `agent()` only when an "Event Cluster" (multiple sources on one target) is identified.
+  - **Fact Extraction:** If Source A mentions a "15% tax" but Source B only says "new taxes," the agent investigates Source B's archives or linked documents specifically to find the missing statistic.
+  - **The "Omission Alert" Logic:** Cross-verify key entities and figures across the cluster to programmatically highlight what each source is "choosing" not to report.
+- [ ] **Historical Narrative Auditing:** Dispatch agents to navigate complex media archives (E-Papers) to find 2-year historical baselines for current political figures.
+  - **The "Narrative Flip-Flop":** Identify when an outlet's framing of the same person/policy has shifted 180 degrees over time (e.g., from "Visionary Leader" to "Fringe Politician").
+- [ ] **YC Angle:** This is your **Proprietary Data Moat.** You are building a system that doesn't just read the news; it _audits_ it against history and competing versions of the truth, creating an "investigative as a service" layer.

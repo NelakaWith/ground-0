@@ -1,0 +1,16 @@
+{
+  "name": "crawler",
+  "version": "0.1.0",
+  "description": "Crawl4AI microservice for Ground-0 platform",
+  "private": true,
+  "scripts": {
+    "dev": "python start.py",
+    "build": "echo Python service - no build needed",
+    "lint": "echo Python service - using black/flake8 separately",
+    "check-types": "echo Python service - using mypy separately",
+    "setup": "python -m venv venv && python -m pip install -r requirements.txt"
+  },
+  "engines": {
+    "python": ">=3.10"
+  }
+}

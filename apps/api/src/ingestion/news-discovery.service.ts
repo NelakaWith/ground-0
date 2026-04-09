@@ -2,12 +2,30 @@ import { Injectable, Inject, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import type ParserType from 'rss-parser';
 import * as ParserNS from 'rss-parser';
-import { diceCoefficient } from 'dice-coefficient';
 import { eq } from 'drizzle-orm';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../db/schema';
 import providers from '../feed/providers';
 import type { Queue } from 'bullmq';
+
+// Manual dice coefficient implementation to avoid ESM/Jest import issues
+function diceCoefficient(a: string, b: string): number {
+  if (a === b) return 1;
+  const getBigrams = (str: string) => {
+    const bigrams = new Set<string>();
+    for (let i = 0; i < str.length - 1; i++) {
+      bigrams.add(str.substring(i, i + 2));
+    }
+    return bigrams;
+  };
+  const bigramsA = getBigrams(a.toLowerCase());
+  const bigramsB = getBigrams(b.toLowerCase());
+  let intersect = 0;
+  for (const bigram of bigramsA) {
+    if (bigramsB.has(bigram)) intersect++;
+  }
+  return (2 * intersect) / (bigramsA.size + bigramsB.size);
+}
 
 /**
  * NewsDiscoveryService handles the initial polling of RSS feeds.
@@ -18,10 +36,9 @@ import type { Queue } from 'bullmq';
 export class NewsDiscoveryService implements OnModuleInit {
   /**
    * RSS Parser instance.
-   * Uses a type-safe constructor cast from the 'rss-parser' package.
    * Provides normalization for different RSS/Atom formats.
    */
-  private readonly parser: InstanceType<typeof ParserNS>;
+  private readonly parser: ParserType;
   /** Logger instance for discovery-related events. */
   private readonly logger = new Logger(NewsDiscoveryService.name);
 
@@ -73,7 +90,7 @@ export class NewsDiscoveryService implements OnModuleInit {
   }
 
   /**
-   * handleCron: Runs every 30 minutes.
+   * handleCron: Runs every 6 hours.
    * Discovers and enqueues new headlines for the scraping worker.
    *
    * Step 1: Iterate through known providers (RSS urls).
@@ -83,12 +100,14 @@ export class NewsDiscoveryService implements OnModuleInit {
    * Step 5: Save discovery metadata to DB.
    * Step 6: Enqueue new/unique articles for scraping.
    */
-  @Cron(CronExpression.EVERY_30_MINUTES)
+  @Cron(CronExpression.EVERY_6_HOURS)
   async handleCron() {
     this.logger.log('Running scheduled discovery');
     for (const p of providers) {
       try {
-        const feed = await this.tryParseFeed(p.rss_url);
+        const feed = (await this.tryParseFeed(p.rss_url)) as ParserType.Output<{
+          [key: string]: any;
+        }>;
         const count = (feed.items && feed.items.length) || 0;
         this.logger.log(`Fetched ${p.name} — ${count} items`);
 
@@ -130,7 +149,7 @@ export class NewsDiscoveryService implements OnModuleInit {
           const jobId = Buffer.from(String(item.link)).toString('base64');
           try {
             await this.scrapeQueue.add(
-              'scrape-article',
+              'scrape',
               {
                 providerId: p.id,
                 link: item.link,
@@ -164,11 +183,9 @@ export class NewsDiscoveryService implements OnModuleInit {
    * @returns The parsed feed object.
    * @throws Error if parsing fails after retries.
    */
-  private async tryParseFeed(
-    url: string,
-  ): Promise<Awaited<ReturnType<InstanceType<typeof ParserNS>['parseURL']>>> {
+  private async tryParseFeed(url: string): Promise<any> {
     try {
-      return await this.parser.parseURL(url);
+      return await (this.parser.parseURL(url) as any);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('403')) {

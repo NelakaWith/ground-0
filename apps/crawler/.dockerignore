@@ -1,0 +1,11 @@
+__pycache__
+*.pyc
+.env
+.env.local
+venv/
+ENV/
+env/
+.git
+.gitignore
+README.md
+*.log

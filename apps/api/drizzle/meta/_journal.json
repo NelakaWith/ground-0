@@ -15,6 +15,13 @@
       "when": 1775054592996,
       "tag": "0001_glamorous_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775098832932,
+      "tag": "0002_fine_peter_quill",
+      "breakpoints": true
     }
   ]
 }

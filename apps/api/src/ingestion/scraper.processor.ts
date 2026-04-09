@@ -1,10 +1,33 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Processor, WorkerHost, InjectQueue } from '@nestjs/bullmq';
 import { Inject, Logger } from '@nestjs/common';
-import { Job } from 'bullmq';
+import { Job, Queue } from 'bullmq';
 import { ScraperService } from './scraper.service';
+import { StagehandService } from './stagehand.service';
+import { AnalysisService } from '../analysis/analysis.service';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../db/schema';
 import { eq } from 'drizzle-orm';
+
+/**
+ * Strips markdown noise (nav links, images, short link-only lines),
+ * leaving only prose paragraphs before saving to DB.
+ */
+function cleanContent(raw: string): string {
+  return raw
+    .split('\n')
+    .map((line) =>
+      line
+        .replace(/!\[.*?\]\(.*?\)/g, '')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .trim(),
+    )
+    .filter((line) => {
+      if (line.length < 40) return false;
+      if ((line.match(/https?:\/\//g) || []).length > 1) return false;
+      return true;
+    })
+    .join('\n');
+}
 
 interface ScrapeJobData {
   link: string;
@@ -23,7 +46,10 @@ export class ScraperProcessor extends WorkerHost {
 
   constructor(
     private readonly scraperService: ScraperService,
+    private readonly stagehandService: StagehandService,
+    private readonly analysisService: AnalysisService,
     @Inject('DRIZZLE_DB') private readonly db: NeonHttpDatabase<typeof schema>,
+    @InjectQueue('analyze') private readonly analyzeQueue: Queue,
   ) {
     super();
   }
@@ -34,7 +60,9 @@ export class ScraperProcessor extends WorkerHost {
    * @param job - The BullMQ job containing relevant article data.
    */
   async process(job: Job<ScrapeJobData, any, string>): Promise<any> {
-    this.logger.log(`Processing job ${job.id} for article: ${job.data.link}`);
+    this.logger.log(
+      `👷 Worker received job: ${job.name} (ID: ${job.id}) for ${job.data.link}`,
+    );
     const { link } = job.data;
 
     if (!link) {
@@ -44,20 +72,41 @@ export class ScraperProcessor extends WorkerHost {
 
     try {
       // Step 1: Perform actual page scraping and extraction
-      const content = await this.scraperService.scrapeContent(link);
+      let content = await this.scraperService.scrapeContent(link);
+
+      // Fallback 1: If Readability failed or returned empty, try Stagehand
+      if (!content) {
+        this.logger.log(
+          `Readability extraction failed for ${link}. Trying Stagehand AI fallback...`,
+        );
+        content = await this.stagehandService.extractArticle(link);
+      }
 
       if (!content) {
         this.logger.warn(
-          `Could not extract usable content for ${link}. Skipping DB update.`,
+          `All extraction methods failed for ${link}. Marking as failed.`,
         );
-        return;
+
+        // Update DB status to failed so it doesn't stay in 'discovered' forever
+        await this.db
+          .update(schema.articles)
+          .set({
+            processingStatus: 'failed',
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.articles.url, link));
+
+        return { success: false, reason: 'no_content_extracted' };
       }
 
-      // Step 2: Update the 'articles' record in Postgres with the extracted text
+      // Step 2: AI-powered refinement to strip noise
+      const refinedContent = await this.analysisService.refineContent(content);
+
+      // Step 3: Update database with refined text
       const result = await this.db
         .update(schema.articles)
         .set({
-          content,
+          content: refinedContent || cleanContent(content), // Fallback if AI fails
           updatedAt: new Date(),
           processingStatus: 'scraped',
           isSnippet: content.length < 500 ? 'true' : 'false', // basic heuristic
@@ -71,9 +120,13 @@ export class ScraperProcessor extends WorkerHost {
         );
       } else {
         this.logger.log(`✅ Success for ${link} (Length: ${content.length})`);
-      }
 
-      // TODO (Future Phase): Enqueue to Analysis Queue here.
+        // Step 3: Enqueue to Analysis Queue
+        if (result[0]?.id) {
+          await this.analyzeQueue.add('analyze', { articleId: result[0].id });
+          this.logger.log(`🧬 Enqueued analysis job for ${result[0].id}`);
+        }
+      }
 
       return { length: content.length, articleId: result[0]?.id };
     } catch (err: unknown) {
