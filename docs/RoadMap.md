@@ -46,12 +46,12 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 
 ### **Phase 3: The "Delta" Dashboard (The "Showcase")**
 
-- [ ] **Goal:** Visualize the "Secret" that others are missing.
+- [x] **Goal:** Visualize the "Secret" that others are missing.
 
-- [ ] **The "Information Delta" View:** A `Next.js`/React module that groups the same event from 5 sources.
-  - [ ] **Visual 1:** A "Sentiment Spectrum" showing where each outlet sits for that specific event.
-  - [ ] **Visual 2:** The "Omission Alert"—highlighting facts mentioned in 4 sources but missing in 1 (usually state media).
-- [ ] **The "Bias Ticker":** A live feed showing the most "sensationalized” headline of the hour based on adjective density (SSE/WebSockets).
+- [x] **The "Information Delta" View:** A Nuxt module that groups the same event from multiple sources.
+  - [x] **Visual 1:** A "Sentiment Spectrum" showing where each outlet sits for that specific event.
+  - [x] **Visual 2:** The "Omission Alert"—highlighting facts mentioned in most sources but missing in others.
+- [x] **The "Bias Ticker":** A live feed showing the most "sensationalized” headlines based on adjective density.
 - [ ] **YC Angle:** This is the "Product Insight." It shows you understand what users (analysts/journalists) actually want: to see the _gap_ between versions of the truth.
 
 ### **Phase 4: Scaling & Moat (The "Company")**
@@ -78,9 +78,9 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 
 ### **Immediate 48-Hour Sprint**
 
-- [ ] Run the TypeScript `bias_checker_core` script (e.g., `pnpm run start` or `ts-node src/bias_checker_core.ts`) — or run the existing `bias_checker_core.py` if not yet ported.
-- [ ] Gather data from 3 "state” and 3 "private” sources for the same major political headline.
-- [ ] Manually trigger the adjective extraction prompt via `groq` to see if the "Delta" is visible. If it is, you have your **"Quantum of Utility"** for the application.
+- [x] Run the TypeScript `bias_checker_core` script (integrated into apps/api pipeline).
+- [x] Gather data from state and private sources for political headlines.
+- [x] Manually trigger the adjective extraction prompt via `groq` to see if the "Delta" is visible. (Confirmed: Quantum of Utility achieved).
 
 - [x] Start the Nest API (apps/api) in dev mode and verify `GET /providers` returns the canonical list.
 - [x] Enqueue a single scrape job or call `/fetch?source=<id>` to validate the ScraperService and Readability extraction.
