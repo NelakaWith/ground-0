@@ -24,6 +24,10 @@ describe('AppController', () => {
     add: jest.fn(),
   };
 
+  const mockAnalyzeQueue = {
+    add: jest.fn(),
+  };
+
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
@@ -40,6 +44,10 @@ describe('AppController', () => {
         {
           provide: getQueueToken('scrape'),
           useValue: mockScrapeQueue,
+        },
+        {
+          provide: getQueueToken('analyze'),
+          useValue: mockAnalyzeQueue,
         },
       ],
     }).compile();

@@ -222,10 +222,13 @@ Do NOT include any preamble or extra text. Just the cleaned article or the error
    */
   async generateEmbedding(text: string): Promise<number[]> {
     try {
+      const modelName =
+        this.configService.get<string>('GEMINI_EMBEDDING_MODEL') ||
+        'gemini-embedding-2-preview';
       const model = this.gemini.getGenerativeModel({
-        model: 'text-embedding-004',
+        model: modelName,
       });
-      const result = await model.embedContent(text.substring(0, 10000)); // Limit to safe embedding length
+      const result = await model.embedContent(text.substring(0, 30000)); // Gemini 2 supports larger context
       return result.embedding.values;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

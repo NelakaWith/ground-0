@@ -16,7 +16,7 @@ export class AppController {
   }
 
   @Post('fetch')
-  async triggerFetch() {
+  triggerFetch() {
     void this.newsDiscoveryService.handleCron();
     return { status: 'Discovery triggered successfully' };
   }
@@ -28,8 +28,14 @@ export class AppController {
   }
 
   @Get('status')
-  async getStatus() {
+  getStatus() {
     return this.appService.getPipelineStatus();
+  }
+
+  @Post('backfill')
+  async triggerBackfill() {
+    const result = await this.appService.backfillMissingData();
+    return { status: 'Backfill process triggered', detail: result };
   }
 
   @Get('providers')

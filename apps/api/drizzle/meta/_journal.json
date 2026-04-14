@@ -22,6 +22,13 @@
       "when": 1775098832932,
       "tag": "0002_fine_peter_quill",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776180915990,
+      "tag": "0003_square_bromley",
+      "breakpoints": true
     }
   ]
 }

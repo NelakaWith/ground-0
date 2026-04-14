@@ -1,9 +1,39 @@
 import { Injectable, Inject, Logger, OnModuleInit } from '@nestjs/common';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from './db/schema';
-import { sql, and, lt, desc, eq } from 'drizzle-orm';
+import { sql, and, lt, desc, eq, isNull, or } from 'drizzle-orm';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+
+export interface Article {
+  id: string;
+  url: string;
+  title: string;
+  providerId: string;
+  pubDate: string | null;
+  content: string | null;
+  biasScore: number | null;
+  sentiment: string | null;
+  summary: string | null;
+  target: string | null;
+  entities: string | null;
+  chargedAdjectives: string | null;
+  sentimentScore: number | null;
+  isPaywalled: string | null;
+  isSnippet: string | null;
+  processingStatus: string | null;
+  embedding: number[] | string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ClusterResult {
+  id: string;
+  target: string | null;
+  title: string;
+  articles: Article[];
+  representativeSentiment: number | null;
+}
 
 @Injectable()
 export class AppService implements OnModuleInit {
@@ -12,6 +42,7 @@ export class AppService implements OnModuleInit {
   constructor(
     @Inject('DRIZZLE_DB') private readonly db: NeonHttpDatabase<typeof schema>,
     @InjectQueue('scrape') private readonly scrapeQueue: Queue,
+    @InjectQueue('analyze') private readonly analyzeQueue: Queue,
   ) {}
 
   async onModuleInit() {
@@ -82,10 +113,6 @@ export class AppService implements OnModuleInit {
           title: article.title,
         });
       }
-      // Note: ScraperProcessor already enqueues to 'analyze' on success.
-      // If stuck in 'scraped', it implies the analysis job failed or was lost.
-      // Since we can't easily access the 'analyze' queue from here without injecting it,
-      // we'll focus on 'discovered' first.
     }
 
     return { recovered: stuckArticles.length };
@@ -128,7 +155,6 @@ export class AppService implements OnModuleInit {
       .orderBy(desc(schema.articles.pubDate));
 
     if (status) {
-      // @ts-ignore - checking if status matches schema
       query.where(eq(schema.articles.processingStatus, status));
     }
 
@@ -136,12 +162,62 @@ export class AppService implements OnModuleInit {
   }
 
   /**
+   * Re-enqueues articles that are missing critical analysis data (backfill).
+   */
+  async backfillMissingData() {
+    this.logger.log('🧹 Checking for articles with missing analysis data...');
+
+    // Find analyzed articles that are missing embeddings or sentiment scores
+    const incompleteArticles = (await this.db
+      .select()
+      .from(schema.articles)
+      .where(
+        and(
+          eq(schema.articles.processingStatus, 'analyzed'),
+          or(
+            isNull(schema.articles.embedding),
+            isNull(schema.articles.sentimentScore),
+            isNull(schema.articles.biasScore),
+          ),
+        ),
+      )) as Article[];
+
+    if (incompleteArticles.length === 0) {
+      this.logger.log('✅ No incomplete articles found.');
+      return { backfilled: 0 };
+    }
+
+    this.logger.warn(
+      `🔄 Found ${incompleteArticles.length} incomplete articles. Re-enqueuing for analysis...`,
+    );
+
+    for (const article of incompleteArticles) {
+      await this.analyzeQueue.add(
+        'analyze',
+        { articleId: article.id },
+        { jobId: `backfill-${article.id}`, removeOnComplete: true },
+      );
+
+      // Reset status to allow re-analysis if needed, though Processor handles it
+      await this.db
+        .update(schema.articles)
+        .set({
+          processingStatus: 'scraped',
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.articles.id, article.id));
+    }
+
+    return { backfilled: incompleteArticles.length };
+  }
+
+  /**
    * Groups articles into clusters based on embedding similarity (The Information Delta).
    */
-  async getClusters() {
+  async getClusters(): Promise<ClusterResult[]> {
     // 1. Fetch analyzed articles from the last 24 hours
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const articles = await this.db
+    const articlesList = (await this.db
       .select()
       .from(schema.articles)
       .where(
@@ -150,23 +226,22 @@ export class AppService implements OnModuleInit {
           sql`${schema.articles.updatedAt} > ${yesterday}`,
         ),
       )
-      .orderBy(desc(schema.articles.pubDate));
+      .orderBy(desc(schema.articles.pubDate))) as Article[];
 
-    if (articles.length === 0) return [];
+    if (articlesList.length === 0) return [];
 
-    const clusters: any[] = [];
+    const clusters: ClusterResult[] = [];
     const processedIds = new Set<string>();
 
-    for (const article of articles) {
+    for (const article of articlesList) {
       if (processedIds.has(article.id)) continue;
 
       // Start a new cluster
       const clusterArticles = [article];
       processedIds.add(article.id);
 
-      // Find similar articles (simple cosine similarity in JS for now or use pgvector if possible)
-      // For the demo, we'll use a threshold-based approach
-      for (const other of articles) {
+      // Find similar articles
+      for (const other of articlesList) {
         if (processedIds.has(other.id)) continue;
 
         const similarity = this.calculateCosineSimilarity(
@@ -180,15 +255,13 @@ export class AppService implements OnModuleInit {
         }
       }
 
-      if (clusterArticles.length >= 1) {
-        clusters.push({
-          id: article.id,
-          target: article.target,
-          title: article.title,
-          articles: clusterArticles,
-          representativeSentiment: article.sentimentScore,
-        });
-      }
+      clusters.push({
+        id: article.id,
+        target: article.target,
+        title: article.title,
+        articles: clusterArticles,
+        representativeSentiment: article.sentimentScore,
+      });
     }
 
     return clusters;
@@ -198,16 +271,18 @@ export class AppService implements OnModuleInit {
    * Fetches the "Bias Ticker" data — most sensationalized headlines.
    */
   async getBiasTicker() {
-    const articles = await this.db
+    const articlesList = (await this.db
       .select()
       .from(schema.articles)
       .where(eq(schema.articles.processingStatus, 'analyzed'))
       .limit(10)
-      .orderBy(desc(schema.articles.updatedAt));
+      .orderBy(desc(schema.articles.updatedAt))) as Article[];
 
-    return articles
+    return articlesList
       .map((a) => {
-        const adjectives = JSON.parse(a.chargedAdjectives || '[]');
+        const adjectives = JSON.parse(
+          (a.chargedAdjectives as string) || '[]',
+        ) as string[];
         return {
           id: a.id,
           title: a.title,
@@ -220,10 +295,16 @@ export class AppService implements OnModuleInit {
       .sort((a, b) => b.adjectiveCount - a.adjectiveCount);
   }
 
-  private calculateCosineSimilarity(vecA: any, vecB: any): number {
+  private calculateCosineSimilarity(
+    vecA: number[] | string | null,
+    vecB: number[] | string | null,
+  ): number {
     if (!vecA || !vecB) return 0;
-    const a = typeof vecA === 'string' ? JSON.parse(vecA) : vecA;
-    const b = typeof vecB === 'string' ? JSON.parse(vecB) : vecB;
+    const a = (typeof vecA === 'string' ? JSON.parse(vecA) : vecA) as number[];
+    const b = (typeof vecB === 'string' ? JSON.parse(vecB) : vecB) as number[];
+
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length)
+      return 0;
 
     let dotProduct = 0;
     let normA = 0;
@@ -233,6 +314,7 @@ export class AppService implements OnModuleInit {
       normA += a[i] * a[i];
       normB += b[i] * b[i];
     }
-    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    const magnitude = Math.sqrt(normA) * Math.sqrt(normB);
+    return magnitude === 0 ? 0 : dotProduct / magnitude;
   }
 }

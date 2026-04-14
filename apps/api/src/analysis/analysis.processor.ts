@@ -110,6 +110,8 @@ export class AnalysisProcessor extends WorkerHost implements OnModuleInit {
         .set({
           target: pass1.target,
           entities: JSON.stringify(pass1.entities),
+          biasScore: pass2.sentimentScore, // Sync to legacy column
+          sentiment: pass2.summary, // Sync to legacy column
           sentimentScore: pass2.sentimentScore,
           chargedAdjectives: JSON.stringify(pass2.chargedAdjectives),
           summary: pass2.summary,
