@@ -1,6 +1,6 @@
 $kind: http-request
 name: Discovery
-url: http://localhost:3000/fetch
+url: http://localhost:3000/api/fetch
 method: POST
 body:
   type: json

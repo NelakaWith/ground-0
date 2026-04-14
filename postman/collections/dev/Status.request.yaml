@@ -1,4 +1,5 @@
 $kind: http-request
-url: http://localhost:3000/status
+name: Status
+url: http://localhost:3000/api/status
 method: GET
 order: 3623511128774530
