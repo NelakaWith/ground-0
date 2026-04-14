@@ -17,7 +17,7 @@ interface Cluster {
 }
 
 const { data: clusters, refresh, pending } = await useFetch<Cluster[]>('/api/articles/clusters', {
-  baseURL: 'http://localhost:3002'
+  baseURL: 'http://localhost:3000'
 })
 
 const handleRefresh = async () => {
@@ -114,14 +114,15 @@ useHead({
                   </h2>
                 </div>
                 <div class="flex -space-x-2">
-                  <div
+                  <UTooltip
                     v-for="article in cluster.articles"
                     :key="article.id"
-                    v-tooltip="article.providerId"
-                    class="w-8 h-8 rounded-full border-2 border-white dark:border-neutral-900 bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center text-[10px] font-bold uppercase overflow-hidden"
+                    :text="article.providerId"
                   >
-                    {{ article.providerId.substring(0, 2) }}
-                  </div>
+                    <div class="w-8 h-8 rounded-full border-2 border-white dark:border-neutral-900 bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center text-[10px] font-bold uppercase overflow-hidden">
+                      {{ article.providerId.substring(0, 2) }}
+                    </div>
+                  </UTooltip>
                 </div>
               </div>
             </template>

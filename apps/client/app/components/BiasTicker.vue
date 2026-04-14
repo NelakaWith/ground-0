@@ -9,7 +9,7 @@ interface TickerItem {
 }
 
 const { data: tickerItems } = await useFetch<TickerItem[]>('/api/articles/bias-ticker', {
-  baseURL: 'http://localhost:3002'
+  baseURL: 'http://localhost:3000'
 })
 
 const getBiasColor = (count: number): 'error' | 'warning' | 'success' => {
