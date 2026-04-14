@@ -94,8 +94,7 @@ export class NewsDiscoveryService implements OnModuleInit {
         const count = (feed.items && feed.items.length) || 0;
         this.logger.log(`Fetched ${p.name} — ${count} items`);
 
-        // ! Limit to 3 stories per outlet for now for testing and to avoid overloading the scraper in early phases.
-        const itemsToProcess = (feed.items || []).slice(0, 3);
+        const itemsToProcess = feed.items || [];
 
         for (const item of itemsToProcess) {
           if (!item.link || !item.title) continue;
