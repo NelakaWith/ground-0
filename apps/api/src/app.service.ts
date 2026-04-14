@@ -134,4 +134,105 @@ export class AppService implements OnModuleInit {
 
     return query;
   }
+
+  /**
+   * Groups articles into clusters based on embedding similarity (The Information Delta).
+   */
+  async getClusters() {
+    // 1. Fetch analyzed articles from the last 24 hours
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const articles = await this.db
+      .select()
+      .from(schema.articles)
+      .where(
+        and(
+          eq(schema.articles.processingStatus, 'analyzed'),
+          sql`${schema.articles.updatedAt} > ${yesterday}`,
+        ),
+      )
+      .orderBy(desc(schema.articles.pubDate));
+
+    if (articles.length === 0) return [];
+
+    const clusters: any[] = [];
+    const processedIds = new Set<string>();
+
+    for (const article of articles) {
+      if (processedIds.has(article.id)) continue;
+
+      // Start a new cluster
+      const clusterArticles = [article];
+      processedIds.add(article.id);
+
+      // Find similar articles (simple cosine similarity in JS for now or use pgvector if possible)
+      // For the demo, we'll use a threshold-based approach
+      for (const other of articles) {
+        if (processedIds.has(other.id)) continue;
+
+        const similarity = this.calculateCosineSimilarity(
+          article.embedding,
+          other.embedding,
+        );
+
+        if (similarity > 0.85) {
+          clusterArticles.push(other);
+          processedIds.add(other.id);
+        }
+      }
+
+      if (clusterArticles.length >= 1) {
+        clusters.push({
+          id: article.id,
+          target: article.target,
+          title: article.title,
+          articles: clusterArticles,
+          representativeSentiment: article.sentimentScore,
+        });
+      }
+    }
+
+    return clusters;
+  }
+
+  /**
+   * Fetches the "Bias Ticker" data — most sensationalized headlines.
+   */
+  async getBiasTicker() {
+    const articles = await this.db
+      .select()
+      .from(schema.articles)
+      .where(eq(schema.articles.processingStatus, 'analyzed'))
+      .limit(10)
+      .orderBy(desc(schema.articles.updatedAt));
+
+    return articles
+      .map((a) => {
+        const adjectives = JSON.parse(a.chargedAdjectives || '[]');
+        return {
+          id: a.id,
+          title: a.title,
+          providerId: a.providerId,
+          adjectiveCount: adjectives.length,
+          adjectives,
+          sentiment: a.sentimentScore,
+        };
+      })
+      .sort((a, b) => b.adjectiveCount - a.adjectiveCount);
+  }
+
+  private calculateCosineSimilarity(vecA: any, vecB: any): number {
+    if (!vecA || !vecB) return 0;
+    const a = typeof vecA === 'string' ? JSON.parse(vecA) : vecA;
+    const b = typeof vecB === 'string' ? JSON.parse(vecB) : vecB;
+
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+    for (let i = 0; i < a.length; i++) {
+      dotProduct += a[i] * b[i];
+      normA += a[i] * a[i];
+      normB += b[i] * b[i];
+    }
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+  }
 }

@@ -99,7 +99,12 @@ export class AnalysisProcessor extends WorkerHost implements OnModuleInit {
         pass1.target,
       );
 
-      // 4. Update Database
+      // 4. Pass 3: Embedding Generation for Clustering
+      const embedding = await this.analysisService.generateEmbedding(
+        article.content,
+      );
+
+      // 5. Update Database
       await this.db
         .update(articles)
         .set({
@@ -108,6 +113,7 @@ export class AnalysisProcessor extends WorkerHost implements OnModuleInit {
           sentimentScore: pass2.sentimentScore,
           chargedAdjectives: JSON.stringify(pass2.chargedAdjectives),
           summary: pass2.summary,
+          embedding: embedding,
           processingStatus: 'analyzed',
           updatedAt: new Date(),
         })

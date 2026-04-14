@@ -41,4 +41,14 @@ export class AppController {
   async getArticles(@Query('status') status?: string) {
     return this.appService.getArticles(status);
   }
+
+  @Get('articles/clusters')
+  async getClusters() {
+    return this.appService.getClusters();
+  }
+
+  @Get('articles/bias-ticker')
+  async getBiasTicker() {
+    return this.appService.getBiasTicker();
+  }
 }

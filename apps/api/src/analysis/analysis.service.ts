@@ -214,4 +214,23 @@ Do NOT include any preamble or extra text. Just the cleaned article or the error
       throw error;
     }
   }
+  /**
+   * Generates a vector embedding for a given text using Gemini.
+   *
+   * @param {string} text - The text to embed.
+   * @returns {Promise<number[]>} The vector embedding.
+   */
+  async generateEmbedding(text: string): Promise<number[]> {
+    try {
+      const model = this.gemini.getGenerativeModel({
+        model: 'text-embedding-004',
+      });
+      const result = await model.embedContent(text.substring(0, 10000)); // Limit to safe embedding length
+      return result.embedding.values;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Error generating embedding: ${message}`);
+      throw error;
+    }
+  }
 }

@@ -37,7 +37,7 @@ export const articles = pgTable('articles', {
 
   // Semantic Search / Near-Duplicate Detection
   // pgvector extension must be enabled in Postgres
-  embedding: vector('embedding', { dimensions: 1536 }), // OpenAI/Groq standard dimensions
+  embedding: vector('embedding', { dimensions: 768 }), // Gemini text-embedding-004 standard dimensions
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
