@@ -1,35 +1,35 @@
 <script setup lang="ts">
 interface Article {
-  id: string
-  providerId: string
-  title: string
-  sentimentScore: number
-  entities: string
-  chargedAdjectives: string
+  id: string;
+  providerId: string;
+  title: string;
+  sentimentScore: number;
+  entities: string;
+  chargedAdjectives: string;
 }
 
 interface Cluster {
-  id: string
-  target: string
-  title: string
-  articles: Article[]
-  representativeSentiment: number
+  id: string;
+  target: string;
+  title: string;
+  articles: Article[];
+  representativeSentiment: number;
 }
 
 const { data: clusters, refresh, pending } = await useFetch<Cluster[]>('/api/articles/clusters', {
-  baseURL: 'http://localhost:3000'
-})
+  baseURL: 'http://localhost:3000',
+});
 
 const handleRefresh = async () => {
-  await refresh()
-}
+  await refresh();
+};
 
 useHead({
   title: 'Delta Dashboard | Ground 0',
   meta: [
-    { name: 'description', content: 'Visualizing version of the truth across Sri Lankan media.' }
-  ]
-})
+    { name: 'description', content: 'Visualizing version of the truth across Sri Lankan media.' },
+  ],
+});
 </script>
 
 <template>

@@ -1,22 +1,25 @@
 <script setup lang="ts">
 interface TickerItem {
-  id: string
-  title: string
-  providerId: string
-  adjectiveCount: number
-  adjectives: string[]
-  sentiment: number
+  id: string;
+  title: string;
+  providerId: string;
+  adjectiveCount: number;
+  adjectives: string[];
+  sentiment: number;
 }
 
-const { data: tickerItems } = await useFetch<TickerItem[]>('/api/articles/bias-ticker', {
-  baseURL: 'http://localhost:3000'
-})
+const { data: tickerItems } = await useFetch<TickerItem[]>(
+  '/api/articles/bias-ticker',
+  {
+    baseURL: 'http://localhost:3000',
+  },
+);
 
 const getBiasColor = (count: number): 'error' | 'warning' | 'success' => {
-  if (count > 5) return 'error'
-  if (count > 2) return 'warning'
-  return 'success'
-}
+  if (count > 5) return 'error';
+  if (count > 2) return 'warning';
+  return 'success';
+};
 </script>
 
 <template>
@@ -46,7 +49,9 @@ const getBiasColor = (count: number): 'error' | 'warning' | 'success' => {
         class="group p-3 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-all cursor-pointer"
       >
         <div class="flex justify-between items-start gap-2 mb-2">
-          <span class="text-xs font-medium uppercase tracking-wider text-neutral-500">
+          <span
+            class="text-xs font-medium uppercase tracking-wider text-neutral-500"
+          >
             {{ item.providerId }}
           </span>
           <UBadge
@@ -57,7 +62,9 @@ const getBiasColor = (count: number): 'error' | 'warning' | 'success' => {
             {{ item.adjectiveCount }} Intensity
           </UBadge>
         </div>
-        <p class="text-sm font-medium line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+        <p
+          class="text-sm font-medium line-clamp-2 mb-2 group-hover:text-primary transition-colors"
+        >
           {{ item.title }}
         </p>
         <div class="flex flex-wrap gap-1">

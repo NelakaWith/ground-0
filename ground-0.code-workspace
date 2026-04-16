@@ -51,6 +51,11 @@
       "editor.defaultFormatter": "esbenp.prettier-vscode",
       "editor.formatOnSave": true,
     },
+    "[vue]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true,
+    },
+    "prettier.singleQuote": true,
     "editor.codeActionsOnSave": {
       "source.fixAll.eslint": "explicit",
     },
