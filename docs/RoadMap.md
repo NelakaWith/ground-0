@@ -11,7 +11,7 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 - [x] **Orchestrator / API:** `NestJS` (apps/api) using `@nestjs/schedule` for cron-driven discovery and **multi-stage BullMQ queues**:
   - **Queue 1 (discovery):** Finds new links, saves to Postgres, enqueues scraper jobs.
   - **Queue 2 (scraper):** Runs Playwright, saves text to Postgres, enqueues analysis jobs.
-  - **Queue 3 (analysis):** Calls LLM, saves final data to Postgres (including embeddings with `pgvector`).
+  - [x] **Queue 3 (analysis):** Calls LLM, saves final data to Postgres (including embeddings with `pgvector`).
   - [x] `rss-parser`: Standardize RSS/Atom feeds.
   - [x] **Logic:** Implement **"Near-Duplicate Detection"** using fuzzy string libraries (`string-similarity` / `fast-fuzzy`) or embedding similarity (85% threshold) with `pgvector` to flag the same "Event Cluster" immediately.
   - [x] **Throttling:** Limit RSS discovery to 3 stories per outlet during development to ensure high-quality debugging and avoid rate-limiting.
@@ -20,7 +20,7 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
   - [x] Discovery: Insert new article metadata (checks for existing URLs).
   - [x] Scraper: Update article with full text and quality flags (`is_snippet`, `is_paywalled`).
   - [x] Analysis: Update article with LLM results; sync embeddings with `pgvector` (Next step).
-- [ ] **YC Angle:** This shows "resourcefulness.” You aren't just using a standard library; you're actively overcoming local technical hurdles (WAFs/Cloudflare).
+- [x] **YC Angle:** This shows "resourcefulness.” You aren't just using a standard library; you're actively overcoming local technical hurdles (WAFs/Cloudflare).
 
 ### **Phase 2: The Intelligence Hybrid (The "Brain")**
 
@@ -35,7 +35,7 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 - [x] **Framing Extraction:** Use `groq` to extract **"Charged Adjectives."**
   - [x] _State Media:_ "The necessary economic adjustment..."
   - [x] _Private Media:_ "The crippling tax hike..."
-- [ ] **YC Angle:** This demonstrates "technical depth.” You aren't just "wrapping an API"; you're building a multi-stage pipeline that combines LLM reasoning with deterministic NLP where needed.
+- [x] **YC Angle:** This demonstrates "technical depth.” You aren't just "wrapping an API"; you're building a multi-stage pipeline that combines LLM reasoning with deterministic NLP where needed.
 
 - [x] **Scraper details:** Use a Playwright `ScraperService` (worker) that consumes jobs from `bullmq`, renders pages with `route.abort()` for non-HTML assets, extracts HTML, runs `@mozilla/readability` for the article body, then forwards content to the Analysis service.
 - [x] **Technical Dredging & AI Browsing (Stagehand):** For snippet-only, paywalled, or highly-protected sources (e.g., EconomyNext, Daily Mirror):
@@ -52,7 +52,7 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
   - [x] **Visual 1:** A "Sentiment Spectrum" showing where each outlet sits for that specific event.
   - [x] **Visual 2:** The "Omission Alert"—highlighting facts mentioned in most sources but missing in others.
 - [x] **The "Bias Ticker":** A live feed showing the most "sensationalized” headlines based on adjective density.
-- [ ] **YC Angle:** This is the "Product Insight." It shows you understand what users (analysts/journalists) actually want: to see the _gap_ between versions of the truth.
+- [x] **YC Angle:** This is the "Product Insight." It shows you understand what users (analysts/journalists) actually want: to see the _gap_ between versions of the truth.
 
 ### **Phase 4: Scaling & Moat (The "Company")**
 
@@ -71,7 +71,7 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 | **Specialized NLP**  | LLM-first (Groq) / **Stagehand** (Semantic)      | Target-dependent sentiment and semantic element selection.    |
 | **Validation**       | `zod`                                            | Ensuring AI outputs conform to schemas at runtime.            |
 | **Analytics/Search** | `pgvector` (Postgres)                            | High-speed similarity search and vector analytics.            |
-| **UI**               | `Next.js`, `react-plotly.js`                     | Building the "Heatmap of Bias" dashboard.                     |
+| **UI**               | `Nuxt 4`, `Nuxt UI`                             | Building the "Information Delta" dashboard.                   |
 | **Orchestration**    | `NestJS`, `@nestjs/schedule`, `bullmq`, `redis`  | Scheduler, API, and durable job queues.                       |
 | **DB / ORM**         | `pg`, `pgvector`, `drizzle-orm`                  | Postgres with vector extension and lightweight ORM.           |
 | **Scraping**         | `playwright`, `undici`, `rss-parser`             | Rendering fallback, fast HTTP fetches, and feed parsing.      |
@@ -95,3 +95,17 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
 - [ ] **Historical Narrative Auditing:** Dispatch agents to navigate complex media archives (E-Papers) to find 2-year historical baselines for current political figures.
   - **The "Narrative Flip-Flop":** Identify when an outlet's framing of the same person/policy has shifted 180 degrees over time (e.g., from "Visionary Leader" to "Fringe Politician").
 - [ ] **YC Angle:** This is your **Proprietary Data Moat.** You are building a system that doesn't just read the news; it _audits_ it against history and competing versions of the truth, creating an "investigative as a service" layer.
+
+### **Phase 6: Multi-Strategy Discovery & Coverage Depth (The "Pulse")**
+
+- [ ] **Goal:** Eliminate the "News Delay" and capture "Hot Topics" from sources that don't offer standard RSS (e.g., NewsFirst, Newswire).
+
+- [ ] **The "Hybrid" Discovery Engine:**
+  - **RSS Strategy:** Maintain traditional polling for reliable state and established private feeds.
+  - **Direct Discovery (Scrape-Based):** Visit high-frequency homepages (NewsFirst, Newswire) directly using `Crawl4AI`.
+  - **Logic:** Implement a link-filtering heuristic to distinguish between "Article Links" and "Navigation/Social Links" on homepages.
+- [ ] **Real-Time Responsiveness:**
+  - Update discovery frequency from every 6 hours to **every 30 minutes**.
+  - Implement "Active Cache" for headlines to ensure de-duplication persists across frequent polls.
+- [ ] **Link Normalization:** Automatically resolve relative paths found on homepages into absolute URLs for the scraper.
+- [ ] **YC Angle:** This demonstrates "Execution Speed" and "System Robustness." You aren't just waiting for the news to come to you; you are actively hunting for it as it breaks, proving the platform can handle the live pulse of the media.
