@@ -5,9 +5,11 @@ This document outlines the core features of the Ground-0 platform, leveraging in
 ---
 
 ## 1. The "Coverage Ratio" Meter
-*Visualizing Phase 1 & 3*
 
-Ground News uses a horizontal bar to show the distribution of Left/Center/Right sources. 
+_Visualizing Phase 1 & 3_
+
+Ground News uses a horizontal bar to show the distribution of Left/Center/Right sources.
+we can
 
 > [!TIP]
 > **Implementation for Ground-0:** Since you have Entity Detection, your meter shouldn't just be "General Bias." It should be **"Entity-Specific Sentiment Distribution."**
@@ -18,7 +20,8 @@ Ground News uses a horizontal bar to show the distribution of Left/Center/Right 
 ---
 
 ## 2. The "Blindspot" Feed
-*Leveraging Phase 1 & 5*
+
+_Leveraging Phase 1 & 5_
 
 Ground News’ most famous feature is highlighting stories that one side of the spectrum is completely ignoring.
 
@@ -29,18 +32,20 @@ Ground News’ most famous feature is highlighting stories that one side of the 
 ---
 
 ## 3. "Charged Word" Highlighting
-*Enhancing Phase 2*
+
+_Enhancing Phase 2_
 
 Ground News shows a "Bias Comparison" summary. Ground-0 takes this further with **Double-Pass Analysis.**
 
 - **The Feature:** An interactive "Heatmap" of the article text where extracted "Charged Adjectives" are highlighted.
-- **Interaction:** Clicking a highlighted word (e.g., *"Crippling"*) shows a tooltip: *"Used 14x more frequently in Private media than State media."*
+- **Interaction:** Clicking a highlighted word (e.g., _"Crippling"_) shows a tooltip: _"Used 14x more frequently in Private media than State media."_
 - **Why it works:** It provides **"Proof of Work"** for LLM analysis. It shows the user exactly why a story was flagged as biased.
 
 ---
 
 ## 4. Ownership Transparency Tags
-*Data Moat for Phase 4*
+
+_Data Moat for Phase 4_
 
 Ground News tags sources by ownership (e.g., "Billionaire Owned").
 
@@ -54,7 +59,8 @@ Ground News tags sources by ownership (e.g., "Billionaire Owned").
 ---
 
 ## 5. Side-by-Side Headline Comparison
-*The "Delta" UI*
+
+_The "Delta" UI_
 
 - **The Feature:** A **"Battle of the Headlines"** UI.
 - **Implementation:** Group event clusters and display the headline from the most "Positive" outlet and the most "Negative" outlet side-by-side.
