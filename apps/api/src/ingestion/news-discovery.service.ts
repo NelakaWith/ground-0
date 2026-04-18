@@ -86,9 +86,14 @@ export class NewsDiscoveryService implements OnModuleInit {
   @Cron(CronExpression.EVERY_6_HOURS)
   async handleCron() {
     this.logger.log('Running scheduled discovery');
+    const providers = await this.db
+      .select()
+      .from(schema.providers)
+      .where(eq(schema.providers.isActive, true));
+
     for (const p of providers) {
       try {
-        const feed = (await this.tryParseFeed(p.rss_url)) as ParserType.Output<{
+        const feed = (await this.tryParseFeed(p.rssUrl)) as ParserType.Output<{
           [key: string]: any;
         }>;
         const count = (feed.items && feed.items.length) || 0;
@@ -154,7 +159,7 @@ export class NewsDiscoveryService implements OnModuleInit {
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        this.logger.error(`Failed to fetch ${p.rss_url}: ${msg}`);
+        this.logger.error(`Failed to fetch ${p.rssUrl}: ${msg}`);
       }
     }
   }

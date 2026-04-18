@@ -55,6 +55,7 @@ export const providers = pgTable('providers', {
   name: text('name').notNull(),
   type: text('type'), // 'state', 'private', etc.
   rssUrl: text('rss_url').notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
 });
 
 export type Article = typeof articles.$inferSelect;
