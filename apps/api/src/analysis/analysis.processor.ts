@@ -74,7 +74,10 @@ export class AnalysisProcessor extends WorkerHost implements OnModuleInit {
       }
 
       const article = result[0];
-      if (!article.content || article.content.length < 50) {
+      const textToAnalyze = article.fullText || article.content;
+      const isFullText = !!article.fullText;
+
+      if (!textToAnalyze || textToAnalyze.length < 50) {
         this.logger.warn(
           `Article content too short or null for analysis: ${articleId}`,
         );
@@ -90,18 +93,20 @@ export class AnalysisProcessor extends WorkerHost implements OnModuleInit {
 
       // 2. Pass 1: Entity & Target Detection
       const pass1 = await this.analysisService.detectEntitiesAndTarget(
-        article.content,
+        textToAnalyze,
+        isFullText,
       );
 
       // 3. Pass 2: Sentiment & Adjective Extraction relative to Target
       const pass2 = await this.analysisService.extractSentimentAndFraming(
-        article.content,
+        textToAnalyze,
         pass1.target,
+        isFullText,
       );
 
       // 4. Pass 3: Embedding Generation for Clustering
       const embedding = await this.analysisService.generateEmbedding(
-        article.content,
+        textToAnalyze,
       );
 
       // 5. Update Database
@@ -122,7 +127,7 @@ export class AnalysisProcessor extends WorkerHost implements OnModuleInit {
         .where(eq(articles.id, articleId));
 
       this.logger.log(
-        `✅ Successfully analyzed article ${articleId} (Target: ${pass1.target})`,
+        `✅ Successfully analyzed article ${articleId} (Target: ${pass1.target}, FullText: ${isFullText})`,
       );
 
       return {

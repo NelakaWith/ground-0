@@ -29,6 +29,13 @@
       "when": 1776180915990,
       "tag": "0003_square_bromley",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776496586159,
+      "tag": "0004_boring_lord_tyger",
+      "breakpoints": true
     }
   ]
 }

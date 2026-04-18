@@ -17,21 +17,21 @@ Transition the Ground-0 platform from RSS-snippet analysis to full-length conten
 
 ### Phase 1: Infrastructure & Schema (Day 1)
 
-- [ ] **Modify Drizzle Schema (`apps/api/src/db/schema.ts`)**:
+- [x] **Modify Drizzle Schema (`apps/api/src/db/schema.ts`)**:
   - Add `full_text: text` column (nullable) to the `articles` table.
   - Add `is_snippet: boolean` (default: `true`) to track the depth of the content.
   - Run migration to update the database.
 
 ### Phase 2: Core Abstraction (Day 1-2)
 
-- [ ] **Create `apps/api/src/ingestion/extraction.service.ts`**:
+- [x] **Create `apps/api/src/ingestion/extraction.service.ts`**:
   - Inject `StagehandService` and `Crawl4AI` (if installed) or placeholder logic.
   - Define `extractContent(url: string)` returning `{ text: string, type: 'snippet' | 'full' }`.
   - Implement logging for success/failure at each tier.
 
 ### Phase 3: Processor Updates (Day 2-3)
 
-- [ ] **Update `ScraperProcessor.ts`**:
+- [x] **Update `ScraperProcessor.ts`**:
   - Remove direct extraction logic.
   - Call `ExtractionService.extractContent()`.
   - Handle database update: store text in `full_text`, toggle `is_snippet` to `false`.
@@ -39,15 +39,15 @@ Transition the Ground-0 platform from RSS-snippet analysis to full-length conten
 
 ### Phase 4: Analysis Intelligence (Day 3-4)
 
-- [ ] **Update `AnalysisService.ts`**:
+- [x] **Update `AnalysisService.ts`**:
   - Modify input logic to select `full_text` (if available) or `snippet_text`.
   - Update system prompt: "Analyze the following [Full Article | Snippet] for media bias..."
   - Add `input_source` flag to the resulting bias report.
 
 ## 3. Configuration & Security
 
-- **Env Variables**: Add required keys for any external extraction tools (e.g., `CRAWL4AI_API_KEY` if applicable).
-- **Rate Limiting**: Integrate `bottleneck` in the new `ExtractionService` to prevent hitting WAF rate limits when running concurrent AI-native extractions.
+- [x] **Env Variables**: Add required keys for any external extraction tools (e.g., `CRAWL4AI_API_KEY` if applicable).
+- [x] **Rate Limiting**: Integrate `bottleneck` (or equivalent simple queue) in the new `ExtractionService` to prevent hitting WAF rate limits when running concurrent AI-native extractions.
 
 ## 4. Verification & Testing Strategy
 

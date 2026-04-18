@@ -5,6 +5,8 @@ import {
   uuid,
   real,
   vector,
+  boolean,
+  type PgTable,
 } from 'drizzle-orm/pg-core';
 
 /**
@@ -17,7 +19,9 @@ export const articles = pgTable('articles', {
   title: text('title').notNull(),
   providerId: text('provider_id').notNull(),
   pubDate: text('pub_date'),
-  content: text('content'),
+  // Content
+  content: text('content'), // This is the old snippet content
+  fullText: text('full_text'), // New: Full article content
 
   // Analysis results
   biasScore: real('bias_score'), // -1.0 to 1.0
@@ -32,7 +36,7 @@ export const articles = pgTable('articles', {
 
   // Flags for content quality and paywalls
   isPaywalled: text('is_paywalled').default('false'), // or boolean if supported
-  isSnippet: text('is_snippet').default('false'),
+  isSnippet: boolean('is_snippet').default(true),
   processingStatus: text('processing_status').default('discovered'), // discovered, scraped, analyzed, failed
 
   // Semantic Search / Near-Duplicate Detection
@@ -52,3 +56,6 @@ export const providers = pgTable('providers', {
   type: text('type'), // 'state', 'private', etc.
   rssUrl: text('rss_url').notNull(),
 });
+
+export type Article = typeof articles.$inferSelect;
+export type NewArticle = typeof articles.$inferInsert;

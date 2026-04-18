@@ -33,6 +33,7 @@
     "@nestjs/schedule": "^6.1.1",
     "@swc/helpers": "^0.5.20",
     "@types/string-similarity": "^4.0.2",
+    "bottleneck": "^2.19.5",
     "bullmq": "^5.71.1",
     "dice-coefficient": "^2.1.1",
     "drizzle-orm": "^0.45.2",

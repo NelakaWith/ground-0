@@ -4,7 +4,7 @@ import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Limit input to ~1500 chars (~375 tokens) — enough for clean article content
-const MAX_INPUT_CHARS = 2500;
+const MAX_INPUT_CHARS = 25000;
 const MAX_REFINE_CHARS = 20000;
 
 /** Thrown when Groq returns 429 — carries the required wait time. */
@@ -157,13 +157,15 @@ Do NOT include any preamble or extra text. Just the cleaned article or the error
    * Pass 1: Entity & Target Detection.
    * Identifies the primary "Target" (the main person, organization, or policy being discussed) and a list of secondary entities.
    *
-   * @param {string} text - The full text of the news article to analyze.
+   * @param {string} text - The content (snippet or full) of the news article to analyze.
+   * @param {boolean} isFullText - Whether the text is full-length or a snippet.
    * @returns {Promise<{ target: string; entities: string[] }>} A promise that resolves to the identified primary target and a list of secondary entities.
    */
   async detectEntitiesAndTarget(
     text: string,
+    isFullText: boolean,
   ): Promise<{ target: string; entities: string[] }> {
-    const systemPrompt = `Identify the primary "Target" (person, entity, or process) and key "Entities" in the text. Output JSON: {"target": string, "entities": string[]}`;
+    const systemPrompt = `Identify the primary "Target" (person, entity, or process) and key "Entities" in the provided [${isFullText ? 'Full Article' : 'Snippet'}]. Output JSON: {"target": string, "entities": string[]}`;
 
     try {
       const content = await this.executeCompletion(
@@ -183,19 +185,21 @@ Do NOT include any preamble or extra text. Just the cleaned article or the error
    * Pass 2: Sentiment & Adjective Extraction.
    * Quantifies sentiment relative to the identified target and extracts charged adjectives to highlight framing bias.
    *
-   * @param {string} text - The full text of the news article.
+   * @param {string} text - The content (snippet or full) of the news article.
    * @param {string} target - The primary subject (identified in Pass 1) against which the sentiment will be scored.
+   * @param {boolean} isFullText - Whether the text is full-length or a snippet.
    * @returns {Promise<{ sentimentScore: number; chargedAdjectives: string[]; summary: string; }>} A promise resolving to the sentiment data, adjective list, and a framing summary.
    */
   async extractSentimentAndFraming(
     text: string,
     target: string,
+    isFullText: boolean,
   ): Promise<{
     sentimentScore: number;
     chargedAdjectives: string[];
     summary: string;
   }> {
-    const systemPrompt = `Analyze this text relative to target: "${target}". Output JSON: {"sentimentScore": number (-1 to 1), "chargedAdjectives": string[], "summary": string (1 sentence)}`;
+    const systemPrompt = `Analyze this [${isFullText ? 'Full Article' : 'Snippet'}] relative to target: "${target}". Output JSON: {"sentimentScore": number (-1 to 1), "chargedAdjectives": string[], "summary": string (1 sentence)}`;
 
     try {
       const content = await this.executeCompletion(
