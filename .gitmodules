@@ -1,0 +1,6 @@
+[submodule "submodules/api-core"]
+	path = submodules/api-core
+	url = git@github.com:NelakaWith/ground-0-api-core.git
+[submodule "submodules/crawler-core"]
+	path = submodules/crawler-core
+	url = git@github.com:NelakaWith/ground-0-crawler-core.git
