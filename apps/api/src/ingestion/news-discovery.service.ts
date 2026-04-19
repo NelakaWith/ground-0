@@ -67,8 +67,8 @@ export class NewsDiscoveryService implements OnModuleInit {
             set: {
               name: p.name,
               discoveryType: p.discoveryType,
-              rssUrl: p.discoveryType === 'rss' ? p.url : null,
-              homepageUrl: p.discoveryType === 'homepage' ? p.url : null,
+              rssUrl: p.discoveryType === 'rss' ? p.url : schema.providers.rssUrl,
+              homepageUrl: p.discoveryType === 'homepage' ? p.url : schema.providers.homepageUrl,
             },
           });
       }

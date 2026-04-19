@@ -49,6 +49,24 @@ export const providers: Provider[] = [
     discoveryType: 'rss',
     url: 'https://island.lk/feed/',
   },
+  {
+    id: 'sunday-observer-en',
+    name: 'Sunday Observer',
+    discoveryType: 'rss',
+    url: 'https://www.sundayobserver.lk/feed/',
+  },
+  {
+    id: 'newswire-en',
+    name: 'Newswire.lk',
+    discoveryType: 'rss',
+    url: 'https://www.newswire.lk/feed/',
+  },
+  {
+    id: 'the-morning-en',
+    name: 'The Morning',
+    discoveryType: 'homepage',
+    url: 'https://www.themorning.lk/',
+  },
 ];
 
 export default providers;

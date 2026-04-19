@@ -3,9 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Limit input to ~1500 chars (~375 tokens) — enough for clean article content
-const MAX_INPUT_CHARS = 25000;
-const MAX_REFINE_CHARS = 20000;
+// Limit input to ~5000 chars (~1250 tokens) — sufficient for framing/sentiment analysis
+const MAX_INPUT_CHARS = 5000;
+const MAX_REFINE_CHARS = 5000;
 
 export interface ArticleAnalysis {
   target: string;

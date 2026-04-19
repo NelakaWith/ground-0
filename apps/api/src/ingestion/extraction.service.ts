@@ -31,11 +31,14 @@ export class ExtractionService {
       try {
         // Logic for tiered extraction would go here
         const result = await this.stagehandService.extractArticle(url);
-        return { text: result ?? '', type: 'full' };
+        if (!result) {
+          throw new Error('Extraction returned null/empty content');
+        }
+        return { text: result, type: 'full' };
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        this.logger.error(`Failed to extract content for ${url}: ${message}`);
-        return { text: '', type: 'snippet' };
+        this.logger.error(`Critical extraction error for ${url}: ${message}`);
+        throw error; // Re-throw to allow BullMQ to handle retries
       }
     });
   }
