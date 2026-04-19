@@ -7,6 +7,14 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const MAX_INPUT_CHARS = 25000;
 const MAX_REFINE_CHARS = 20000;
 
+export interface ArticleAnalysis {
+  target: string;
+  entities: string[];
+  sentimentScore: number;
+  chargedAdjectives: string[];
+  summary: string;
+}
+
 /** Thrown when Groq returns 429 — carries the required wait time. */
 export class GroqRateLimitError extends Error {
   constructor(public readonly retryAfterMs: number) {
@@ -154,52 +162,34 @@ Do NOT include any preamble or extra text. Just the cleaned article or the error
   }
 
   /**
-   * Pass 1: Entity & Target Detection.
-   * Identifies the primary "Target" (the main person, organization, or policy being discussed) and a list of secondary entities.
-   *
-   * @param {string} text - The content (snippet or full) of the news article to analyze.
-   * @param {boolean} isFullText - Whether the text is full-length or a snippet.
-   * @returns {Promise<{ target: string; entities: string[] }>} A promise that resolves to the identified primary target and a list of secondary entities.
-   */
-  async detectEntitiesAndTarget(
-    text: string,
-    isFullText: boolean,
-  ): Promise<{ target: string; entities: string[] }> {
-    const systemPrompt = `Identify the primary "Target" (person, entity, or process) and key "Entities" in the provided [${isFullText ? 'Full Article' : 'Snippet'}]. Output JSON: {"target": string, "entities": string[]}`;
-
-    try {
-      const content = await this.executeCompletion(
-        systemPrompt,
-        text.substring(0, MAX_INPUT_CHARS),
-        true,
-      );
-      return JSON.parse(content) as { target: string; entities: string[] };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Error in Pass 1 (Entity Detection): ${message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Pass 2: Sentiment & Adjective Extraction.
-   * Quantifies sentiment relative to the identified target and extracts charged adjectives to highlight framing bias.
+   * Combined Pass: Entity, Sentiment, and Framing Detection.
+   * Performs entity extraction, sentiment scoring, and framing analysis in one LLM call.
    *
    * @param {string} text - The content (snippet or full) of the news article.
-   * @param {string} target - The primary subject (identified in Pass 1) against which the sentiment will be scored.
    * @param {boolean} isFullText - Whether the text is full-length or a snippet.
-   * @returns {Promise<{ sentimentScore: number; chargedAdjectives: string[]; summary: string; }>} A promise resolving to the sentiment data, adjective list, and a framing summary.
+   * @returns {Promise<ArticleAnalysis>} The combined analysis results.
    */
-  async extractSentimentAndFraming(
+  async analyzeArticle(
     text: string,
-    target: string,
     isFullText: boolean,
-  ): Promise<{
-    sentimentScore: number;
-    chargedAdjectives: string[];
-    summary: string;
-  }> {
-    const systemPrompt = `Analyze this [${isFullText ? 'Full Article' : 'Snippet'}] relative to target: "${target}". Output JSON: {"sentimentScore": number (-1 to 1), "chargedAdjectives": string[], "summary": string (1 sentence)}`;
+  ): Promise<ArticleAnalysis> {
+    const systemPrompt = `Analyze this [${
+      isFullText ? 'Full Article' : 'Snippet'
+    }].
+1. Identify the primary "Target" (person, entity, or process).
+2. Extract key "Entities".
+3. Calculate "sentimentScore" relative to the target (-1 to 1).
+4. Extract "chargedAdjectives" used for framing.
+5. Provide a 1-sentence "summary" of the framing.
+
+Output ONLY valid JSON:
+{
+  "target": string,
+  "entities": string[],
+  "sentimentScore": number,
+  "chargedAdjectives": string[],
+  "summary": string
+}`;
 
     try {
       const content = await this.executeCompletion(
@@ -207,19 +197,17 @@ Do NOT include any preamble or extra text. Just the cleaned article or the error
         text.substring(0, MAX_INPUT_CHARS),
         true,
       );
-      return JSON.parse(content) as {
-        sentimentScore: number;
-        chargedAdjectives: string[];
-        summary: string;
-      };
+      return JSON.parse(content) as ArticleAnalysis;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Error in Pass 2 (Framing Extraction): ${message}`);
+      this.logger.error(`Error in Consolidated Analysis Pass: ${message}`);
       throw error;
     }
   }
+
   /**
    * Generates a vector embedding for a given text using Gemini.
+   * Optimized to 10k chars as standard embedding models are context-limited.
    *
    * @param {string} text - The text to embed.
    * @returns {Promise<number[]>} The vector embedding.
@@ -232,7 +220,9 @@ Do NOT include any preamble or extra text. Just the cleaned article or the error
       const model = this.gemini.getGenerativeModel({
         model: modelName,
       });
-      const result = await model.embedContent(text.substring(0, 30000)); // Gemini 2 supports larger context
+      // Standard embedding models are most effective within the first ~2k-4k tokens.
+      // Truncating to 10k chars is sufficient and saves compute.
+      const result = await model.embedContent(text.substring(0, 10000));
       return result.embedding.values;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

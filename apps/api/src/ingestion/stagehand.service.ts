@@ -1,9 +1,21 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+// Interface for Stagehand session
+interface StagehandSession {
+  init(): Promise<void>;
+  context: {
+    activePage(): any | undefined;
+    pages(): any[];
+  };
+  act(action: string): Promise<void>;
+  extract(prompt: string): Promise<{ extraction: string | null }>;
+  agent(config: { systemPrompt: string }): {
+    execute(task: string): Promise<void>;
+  };
+  close(): Promise<void>;
+}
 
-// Use a dynamic import for ESM-only modules in Test/Node environment
-// This prevents Jest from statically analyzing and failing on the export/import syntax
-let Stagehand: any;
+let StagehandClass: new (options: any) => StagehandSession;
 
 @Injectable()
 export class StagehandService implements OnModuleDestroy {
@@ -11,49 +23,42 @@ export class StagehandService implements OnModuleDestroy {
 
   constructor(private readonly config: ConfigService) {}
 
-  /**
-   * Lazy-load Stagehand class to avoid ESM parsing issues during startup/testing.
-   */
-  private async getStagehandClass() {
-    if (!Stagehand) {
+  private async getStagehandClass(): Promise<
+    new (options: any) => StagehandSession
+  > {
+    if (!StagehandClass) {
       const module = await import('@browserbasehq/stagehand');
-      Stagehand = module.Stagehand;
+      StagehandClass = module.Stagehand as any;
     }
-    return Stagehand;
+    return StagehandClass;
   }
 
-  /**
-   * Create a new Stagehand session for browser automation.
-   * Uses local Chrome with Groq API for vision-based page understanding.
-   * Set GROQ_API_KEY and STAGEHAND_MODEL in environment.
-   */
-  private async createSession(): Promise<any> {
-    const StagehandClass = await this.getStagehandClass();
+  private async createSession(): Promise<StagehandSession> {
+    const Class = await this.getStagehandClass();
     const modelName =
       this.config.get<string>('STAGEHAND_MODEL') ??
-      'groq-llama-3.3-70b-versatile';
-    const model: any = {
-      modelName,
-      apiKey: this.config.get<string>('GROQ_API_KEY') ?? undefined,
-    };
+      this.config.get<string>('GEMINI_MODEL') ??
+      'google:gemini-2.5-flash';
 
-    const options: any = {
+    const options = {
       env: 'LOCAL',
       localBrowserLaunchOptions: {
         headless: true,
         executablePath:
           process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined,
       },
-      model,
+      model: {
+        modelName,
+        apiKey: this.config.get<string>('GEMINI_API_KEY'),
+      },
     };
 
-    const stagehand = new StagehandClass(options);
-
+    const stagehand = new Class(options);
     await stagehand.init();
     return stagehand;
   }
 
-  private getActivePage(stagehand: any): any {
+  private getActivePage(stagehand: StagehandSession): any {
     const page = stagehand.context.activePage() ?? stagehand.context.pages()[0];
     if (!page) {
       throw new Error('Stagehand context has no active page');
@@ -61,8 +66,10 @@ export class StagehandService implements OnModuleDestroy {
     return page;
   }
 
-  private async hydratePage(stagehand: any, page: any): Promise<void> {
-    // A short scroll/wait loop to trigger lazy content and hydration.
+  private async hydratePage(
+    stagehand: StagehandSession,
+    page: any,
+  ): Promise<void> {
     for (let i = 0; i < 3; i += 1) {
       this.logger.log(`🤖 Stagehand: Scroll-Hydrate iteration ${i + 1}/3...`);
       await stagehand.act('Scroll to the bottom of the page');
@@ -70,140 +77,65 @@ export class StagehandService implements OnModuleDestroy {
     }
   }
 
-  /**
-   * Extract full article content using AI-powered page understanding.
-   * This is the fallback when Playwright + Readability fails.
-   *
-   * @param url Article URL to extract from
-   * @returns Full article text, or null if extraction fails
-   */
   async extractArticle(url: string): Promise<string | null> {
-    let stagehand: any | null = null;
+    let stagehand: StagehandSession | null = null;
     this.logger.log(`🤖 Stagehand: Starting extraction for ${url}`);
 
     try {
-      this.logger.log(`🤖 Stagehand: Initializing browser session...`);
       stagehand = await this.createSession();
       const page = this.getActivePage(stagehand);
 
-      // Navigate to the URL
-      this.logger.log(`🤖 Stagehand: Navigating to ${url}`);
-      await page.goto(url, {
-        waitUntil: 'domcontentloaded',
-        timeoutMs: 30000,
-      });
-
-      // Let page settle (hydration, lazy-loaded content)
-      this.logger.log(`🤖 Stagehand: Waiting for page to settle...`);
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeoutMs: 30000 });
       await page.waitForTimeout(2000);
-
-      // Scroll to trigger any lazy-loaded content
-      this.logger.log(`🤖 Stagehand: Hydrating page (scroll loop)...`);
       await this.hydratePage(stagehand, page);
 
-      // Extract the full article body using vision + LLM
-      this.logger.log(`🤖 Stagehand: Extracting content via AI Vision...`);
       const result = await stagehand.extract(
         'Extract the complete article text from this page, including all paragraphs, quotes, and important details. Ignore navigation, ads, and comments.',
       );
 
-      const content = result?.extraction ?? null;
-
-      if (content) {
-        this.logger.log(
-          `✅ Stagehand: Extraction successful for ${url} (${content.length} chars)`,
-        );
-      }
-      return content;
+      return result?.extraction ?? null;
     } catch (err) {
       this.logger.warn(
-        `Stagehand extraction failed for ${url}: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
+        `Stagehand extraction failed for ${url}: ${err instanceof Error ? err.message : String(err)}`,
       );
       return null;
     } finally {
-      if (stagehand) {
-        await stagehand
-          .close()
-          .catch((e: unknown) =>
-            this.logger.warn(
-              `Failed to close Stagehand session: ${
-                e instanceof Error ? e.message : String(e)
-              }`,
-            ),
-          );
-      }
+      if (stagehand) await stagehand.close().catch(() => {});
     }
   }
 
-  /**
-   * Use AI agent for multi-step navigation (e.g., clicking "Read More", pagination).
-   * For handling paywalled content with JS-gated access.
-   *
-   * @param url Starting URL
-   * @param task Natural language instruction for the agent
-   * @returns Result of the agent execution
-   */
   async navigateAndExtract(url: string, task: string): Promise<string | null> {
-    let stagehand: any | null = null;
+    let stagehand: StagehandSession | null = null;
 
     try {
       stagehand = await this.createSession();
       const page = this.getActivePage(stagehand);
 
-      await page.goto(url, {
-        waitUntil: 'domcontentloaded',
-        timeoutMs: 30000,
-      });
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeoutMs: 30000 });
       await page.waitForTimeout(2000);
-
-      // Scroll to trigger any lazy-loaded content
       await this.hydratePage(stagehand, page);
 
-      // Use agent for multi-step interaction
       const agent = stagehand.agent({
         systemPrompt:
           'You are a helpful assistant that navigates websites and extracts article content. Complete the task step by step.',
       });
 
       await agent.execute(task);
-
-      // Extract final content after agent work
       const result = await stagehand.extract(
         'Extract the article content that is now visible on screen',
       );
-
-      const content = result?.extraction ?? null;
-
-      if (content) {
-        this.logger.log(`✓ Stagehand agent navigation successful for ${url}`);
-      }
-      return content;
+      return result?.extraction ?? null;
     } catch (err) {
       this.logger.warn(
-        `Stagehand agent navigation failed for ${url}: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
+        `Stagehand agent navigation failed for ${url}: ${err instanceof Error ? err.message : String(err)}`,
       );
       return null;
     } finally {
-      if (stagehand) {
-        await stagehand
-          .close()
-          .catch((e: unknown) =>
-            this.logger.warn(
-              `Failed to close Stagehand session: ${
-                e instanceof Error ? e.message : String(e)
-              }`,
-            ),
-          );
-      }
+      if (stagehand) await stagehand.close().catch(() => {});
     }
   }
 
   onModuleDestroy(): void {
-    // Sessions are closed per-use above; nothing persistent to clean up
     this.logger.log('StagehandService destroyed');
   }
 }
