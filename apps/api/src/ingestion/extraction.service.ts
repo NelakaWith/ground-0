@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { StagehandService } from './stagehand.service';
+import { ScraperService } from './scraper.service';
 import Bottleneck from 'bottleneck';
 
 /**
@@ -11,7 +12,10 @@ export class ExtractionService {
   private readonly logger = new Logger(ExtractionService.name);
   private readonly limiter: Bottleneck;
 
-  constructor(private readonly stagehandService: StagehandService) {
+  constructor(
+    private readonly stagehandService: StagehandService,
+    private readonly scraperService: ScraperService,
+  ) {
     this.limiter = new Bottleneck({
       minTime: 2000, // 2 seconds between jobs
       maxConcurrent: 1, // Ensure only one extraction at a time per instance
@@ -20,6 +24,7 @@ export class ExtractionService {
 
   /**
    * Extracts content from a given URL using a rate-limited queue.
+   * Strategy: Try Crawl4AI (ScraperService) first, fall back to Stagehand (Agentic) if needed.
    */
   async extractContent(
     url: string,
@@ -28,18 +33,21 @@ export class ExtractionService {
 
     return this.limiter.schedule(async () => {
       this.logger.log(`Attempting extraction for: ${url}`);
-      try {
-        // Logic for tiered extraction would go here
-        const result = await this.stagehandService.extractArticle(url);
-        if (!result) {
-          throw new Error('Extraction returned null/empty content');
-        }
-        return { text: result, type: 'full' };
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error);
-        this.logger.error(`Critical extraction error for ${url}: ${message}`);
-        throw error; // Re-throw to allow BullMQ to handle retries
+
+      // 1. Try high-fidelity Crawl4AI extraction
+      const scraped = await this.scraperService.scrapeContent(url);
+      if (scraped) {
+        return { text: scraped, type: 'full' };
       }
+
+      // 2. Fall back to agentic Stagehand extraction
+      this.logger.log(`Falling back to Stagehand for: ${url}`);
+      const stagehandResult = await this.stagehandService.extractArticle(url);
+      if (!stagehandResult) {
+        throw new Error('All extraction methods failed');
+      }
+
+      return { text: stagehandResult, type: 'full' };
     });
   }
 }
