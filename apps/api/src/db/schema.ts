@@ -54,7 +54,9 @@ export const providers = pgTable('providers', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   type: text('type'), // 'state', 'private', etc.
-  rssUrl: text('rss_url').notNull(),
+  rssUrl: text('rss_url'),
+  homepageUrl: text('homepage_url'),
+  discoveryType: text('discovery_type').default('rss').notNull(),
   isActive: boolean('is_active').default(true).notNull(),
 });
 

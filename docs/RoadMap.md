@@ -109,3 +109,13 @@ This phased roadmap expands your existing blueprint into a YC-caliber execution 
   - Implement "Active Cache" for headlines to ensure de-duplication persists across frequent polls.
 - [ ] **Link Normalization:** Automatically resolve relative paths found on homepages into absolute URLs for the scraper.
 - [ ] **YC Angle:** This demonstrates "Execution Speed" and "System Robustness." You aren't just waiting for the news to come to you; you are actively hunting for it as it breaks, proving the platform can handle the live pulse of the media.
+
+### **Phase 7: Autonomous Discovery (The "Prober")**
+
+- [ ] **Goal:** Eliminate manual provider configuration by implementing an auto-discovery pipeline.
+- [ ] **Prober Service:**
+  - Build a `DiscoveryAutofillService` that seeds from a list of known media domains.
+  - Use `Crawl4AI` to probe domains for RSS feeds.
+  - Implement heuristic classification: if no RSS is found, classify as `homepage` and auto-generate scrape-link selectors.
+- [ ] **Adaptive Registration:** Automatically "promote" probed domains into the `providers` table once extraction capability is confirmed.
+- [ ] **YC Angle:** This demonstrates "System Scalability." You aren't just onboarding sources; you're building an engine that learns how to ingest the entire media landscape without manual intervention.
