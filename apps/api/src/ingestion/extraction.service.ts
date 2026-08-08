@@ -47,8 +47,14 @@ export class ExtractionService {
           const doc = new JSDOM(html, { url });
           const reader = new Readability(doc.window.document);
           const article = reader.parse();
-          if (article && article.textContent.length > 500) {
-            this.logger.log(`✅ Tier 1 (Readability): Successfully extracted ${article.textContent.length} chars.`);
+          if (
+            article &&
+            article.textContent &&
+            article.textContent.length > 500
+          ) {
+            this.logger.log(
+              `✅ Tier 1 (Readability): Successfully extracted ${article.textContent.length} chars.`,
+            );
             return { text: article.textContent, type: 'full' };
           }
         }

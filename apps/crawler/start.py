@@ -18,14 +18,14 @@ def ensure_venv():
         venv.create(venv_path, with_pip=True)
 
         # Upgrade pip
-        pip_executable = venv_path / ("Scripts" if os.name == "nt" else "bin") / ("pip.exe" if os.name == "nt" else "pip")
-        subprocess.run([str(pip_executable), "install", "--upgrade", "pip"], check=True)
+        python_executable = venv_path / ("Scripts" if os.name == "nt" else "bin") / ("python.exe" if os.name == "nt" else "python")
+        subprocess.run([str(python_executable), "-m", "pip", "install", "--upgrade", "pip"], check=True)
 
         # Install dependencies
         req_file = Path(__file__).parent / "requirements.txt"
         if req_file.exists():
             print(f"Installing dependencies from {req_file}...")
-            subprocess.run([str(pip_executable), "install", "-r", str(req_file)], check=True)
+            subprocess.run([str(python_executable), "-m", "pip", "install", "-r", str(req_file)], check=True)
 
         print("✓ Virtual environment setup complete")
 
