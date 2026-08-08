@@ -73,7 +73,7 @@ The platform is built as a high-performance **NestJS** monorepo using **Turborep
 
 ## 📅 Roadmap & Progress
 
-See the detailed [RoadMap.md](docs/RoadMap.md) for Phase 1 (Ingestion), Phase 2 (Intelligence), and Phase 3 (Showcase) progress.
+See the detailed [RoadMap.md](docs/todo/RoadMap.md) for Phase 1 (Ingestion), Phase 2 (Intelligence), and Phase 3 (Showcase) progress.
 
 ---
 

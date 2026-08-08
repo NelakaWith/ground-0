@@ -75,7 +75,7 @@ Build an automated pipeline that monitors Sri Lankan news via RSS feeds and uses
 
 ## 3. Phased Implementation Roadmap
 
-[RoadMap](./RoadMap.md)
+[RoadMap](./todo/RoadMap.md)
 
 ## 4. Verified RSS Sources (Working)
 
