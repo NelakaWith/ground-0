@@ -6,6 +6,7 @@ import { NewsDiscoveryService } from './news-discovery.service';
 import { ScraperService } from './scraper.service';
 import { ScraperProcessor } from './scraper.processor';
 import { StagehandService } from './stagehand.service';
+import { ExtractionService } from './extraction.service';
 import { AnalysisModule } from '../analysis/analysis.module';
 import { Queue } from 'bullmq';
 import type { RedisOptions } from 'ioredis';
@@ -57,6 +58,7 @@ import type { RedisOptions } from 'ioredis';
     ScraperService,
     ScraperProcessor,
     StagehandService,
+    ExtractionService,
     {
       /**
        * 'SCRAPE_QUEUE' Provider:
@@ -97,6 +99,6 @@ import type { RedisOptions } from 'ioredis';
    * Export the queue provider so other modules (like a future ScraperModule)
    * can inject it to manage jobs.
    */
-  exports: [BullModule, 'SCRAPE_QUEUE', NewsDiscoveryService, StagehandService],
+  exports: [BullModule, 'SCRAPE_QUEUE', NewsDiscoveryService, StagehandService, ExtractionService],
 })
 export class IngestionModule {}

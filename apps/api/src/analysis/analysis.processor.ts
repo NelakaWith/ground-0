@@ -74,7 +74,10 @@ export class AnalysisProcessor extends WorkerHost implements OnModuleInit {
       }
 
       const article = result[0];
-      if (!article.content || article.content.length < 50) {
+      const textToAnalyze = article.fullText || article.content;
+      const isFullText = !!article.fullText;
+
+      if (!textToAnalyze || textToAnalyze.length < 50) {
         this.logger.warn(
           `Article content too short or null for analysis: ${articleId}`,
         );
@@ -88,33 +91,28 @@ export class AnalysisProcessor extends WorkerHost implements OnModuleInit {
         return { success: false, reason: 'insufficient_content' };
       }
 
-      // 2. Pass 1: Entity & Target Detection
-      const pass1 = await this.analysisService.detectEntitiesAndTarget(
-        article.content,
+      // 2. Combined Pass: Entity, Target, Sentiment & Adjective Extraction
+      const analysis = await this.analysisService.analyzeArticle(
+        textToAnalyze,
+        isFullText,
       );
 
-      // 3. Pass 2: Sentiment & Adjective Extraction relative to Target
-      const pass2 = await this.analysisService.extractSentimentAndFraming(
-        article.content,
-        pass1.target,
-      );
-
-      // 4. Pass 3: Embedding Generation for Clustering
+      // 3. Pass 3: Embedding Generation for Clustering
       const embedding = await this.analysisService.generateEmbedding(
-        article.content,
+        textToAnalyze,
       );
 
-      // 5. Update Database
+      // 4. Update Database
       await this.db
         .update(articles)
         .set({
-          target: pass1.target,
-          entities: JSON.stringify(pass1.entities),
-          biasScore: pass2.sentimentScore, // Sync to legacy column
-          sentiment: pass2.summary, // Sync to legacy column
-          sentimentScore: pass2.sentimentScore,
-          chargedAdjectives: JSON.stringify(pass2.chargedAdjectives),
-          summary: pass2.summary,
+          target: analysis.target,
+          entities: JSON.stringify(analysis.entities),
+          biasScore: analysis.sentimentScore, // Sync to legacy column
+          sentiment: analysis.summary, // Sync to legacy column
+          sentimentScore: analysis.sentimentScore,
+          chargedAdjectives: JSON.stringify(analysis.chargedAdjectives),
+          summary: analysis.summary,
           embedding: embedding,
           processingStatus: 'analyzed',
           updatedAt: new Date(),
@@ -122,13 +120,13 @@ export class AnalysisProcessor extends WorkerHost implements OnModuleInit {
         .where(eq(articles.id, articleId));
 
       this.logger.log(
-        `✅ Successfully analyzed article ${articleId} (Target: ${pass1.target})`,
+        `✅ Successfully analyzed article ${articleId} (Target: ${analysis.target}, FullText: ${isFullText})`,
       );
 
       return {
         success: true,
-        target: pass1.target,
-        sentiment: pass2.sentimentScore,
+        target: analysis.target,
+        sentiment: analysis.sentimentScore,
       };
     } catch (error) {
       if (error instanceof GroqRateLimitError) {

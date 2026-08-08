@@ -1,8 +1,7 @@
 import { Processor, WorkerHost, InjectQueue } from '@nestjs/bullmq';
 import { Inject, Logger } from '@nestjs/common';
 import { Job, Queue } from 'bullmq';
-import { ScraperService } from './scraper.service';
-import { StagehandService } from './stagehand.service';
+import { ExtractionService } from './extraction.service';
 import { AnalysisService } from '../analysis/analysis.service';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../db/schema';
@@ -46,8 +45,7 @@ export class ScraperProcessor extends WorkerHost {
   private readonly logger = new Logger(ScraperProcessor.name);
 
   constructor(
-    private readonly scraperService: ScraperService,
-    private readonly stagehandService: StagehandService,
+    private readonly extractionService: ExtractionService,
     private readonly analysisService: AnalysisService,
     @Inject('DRIZZLE_DB') private readonly db: NeonHttpDatabase<typeof schema>,
     @InjectQueue('analyze') private readonly analyzeQueue: Queue,
@@ -72,16 +70,9 @@ export class ScraperProcessor extends WorkerHost {
     }
 
     try {
-      // Step 1: Perform actual page scraping and extraction
-      let content = await this.scraperService.scrapeContent(link);
-
-      // Fallback 1: If Readability failed or returned empty, try Stagehand
-      if (!content) {
-        this.logger.log(
-          `Readability extraction failed for ${link}. Trying Stagehand AI fallback...`,
-        );
-        content = await this.stagehandService.extractArticle(link);
-      }
+      // Step 1: Perform actual page extraction using tiered service
+      const extraction = await this.extractionService.extractContent(link);
+      const content = extraction.text;
 
       if (!content) {
         this.logger.warn(
@@ -100,46 +91,18 @@ export class ScraperProcessor extends WorkerHost {
         return { success: false, reason: 'no_content_extracted' };
       }
 
-      // Step 2: AI-powered refinement to strip noise
-      let refinedContent = await this.analysisService.refineContent(
-        content,
-        job.data.title,
-      );
-
-      // --- Title Verification Logic ---
-      // AI output format from prompt is markdown, starting with title
-      const lines = refinedContent.split('\n');
-      const aiTitle = lines[0].replace(/^#+\s*/, '').trim(); // Remove markdown headers
-
-      const similarity = diceCoefficient(aiTitle, job.data.title);
-      const isTitleMismatch =
-        aiTitle.split(' ').length < 3 || // Too short (like "Local")
-        similarity < 0.4; // Too different from RSS
-
-      // Check for AI error tokens or typical placeholder phrases
-      const isPlaceholder =
-        refinedContent.includes('[NO_ARTICLE_CONTENT_FOUND]') ||
-        refinedContent.toLowerCase().includes('this is a placeholder') ||
-        refinedContent
-          .toLowerCase()
-          .includes('actual article text is missing') ||
-        isTitleMismatch;
-
-      if (isPlaceholder) {
-        this.logger.warn(
-          `⚠️ AI refinement failed for ${link} (Mismatch: ${isTitleMismatch}, Title: "${aiTitle}"). Using regex fallback.`,
-        );
-        refinedContent = cleanContent(content);
-      }
+      // Step 2: Basic regex refinement to strip noise
+      // CAUTION: LLM AI refinement disabled to save DB only without LLM calls.
+      let refinedContent = cleanContent(content);
 
       // Step 3: Update database with refined text
       const result = await this.db
         .update(schema.articles)
         .set({
-          content: refinedContent,
+          fullText: refinedContent,
           updatedAt: new Date(),
           processingStatus: 'scraped',
-          isSnippet: content.length < 500 ? 'true' : 'false', // basic heuristic
+          isSnippet: extraction.type === 'snippet',
         })
         .where(eq(schema.articles.url, link))
         .returning({ id: schema.articles.id });
@@ -151,10 +114,11 @@ export class ScraperProcessor extends WorkerHost {
       } else {
         this.logger.log(`✅ Success for ${link} (Length: ${content.length})`);
 
-        // Step 3: Enqueue to Analysis Queue
+        // Step 4: Enqueue to Analysis Queue
+        // CAUTION: LLM analysis queue disabled to avoid running LLM on scraped content.
         if (result[0]?.id) {
-          await this.analyzeQueue.add('analyze', { articleId: result[0].id });
-          this.logger.log(`🧬 Enqueued analysis job for ${result[0].id}`);
+          // await this.analyzeQueue.add('analyze', { articleId: result[0].id });
+          this.logger.log(`⚠️ LLM Analysis skipped for ${result[0].id}`);
         }
       }
 
