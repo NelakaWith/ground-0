@@ -91,37 +91,9 @@ export class ScraperProcessor extends WorkerHost {
         return { success: false, reason: 'no_content_extracted' };
       }
 
-      // Step 2: AI-powered refinement to strip noise
-      let refinedContent = await this.analysisService.refineContent(
-        content,
-        job.data.title,
-      );
-
-      // --- Title Verification Logic ---
-      // AI output format from prompt is markdown, starting with title
-      const lines = refinedContent.split('\n');
-      const aiTitle = lines[0].replace(/^#+\s*/, '').trim(); // Remove markdown headers
-
-      const similarity = diceCoefficient(aiTitle, job.data.title);
-      const isTitleMismatch =
-        aiTitle.split(' ').length < 3 || // Too short (like "Local")
-        similarity < 0.4; // Too different from RSS
-
-      // Check for AI error tokens or typical placeholder phrases
-      const isPlaceholder =
-        refinedContent.includes('[NO_ARTICLE_CONTENT_FOUND]') ||
-        refinedContent.toLowerCase().includes('this is a placeholder') ||
-        refinedContent
-          .toLowerCase()
-          .includes('actual article text is missing') ||
-        isTitleMismatch;
-
-      if (isPlaceholder) {
-        this.logger.warn(
-          `⚠️ AI refinement failed for ${link} (Mismatch: ${isTitleMismatch}, Title: "${aiTitle}"). Using regex fallback.`,
-        );
-        refinedContent = cleanContent(content);
-      }
+      // Step 2: Basic regex refinement to strip noise
+      // CAUTION: LLM AI refinement disabled to save DB only without LLM calls.
+      let refinedContent = cleanContent(content);
 
       // Step 3: Update database with refined text
       const result = await this.db
@@ -143,9 +115,10 @@ export class ScraperProcessor extends WorkerHost {
         this.logger.log(`✅ Success for ${link} (Length: ${content.length})`);
 
         // Step 4: Enqueue to Analysis Queue
+        // CAUTION: LLM analysis queue disabled to avoid running LLM on scraped content.
         if (result[0]?.id) {
-          await this.analyzeQueue.add('analyze', { articleId: result[0].id });
-          this.logger.log(`🧬 Enqueued analysis job for ${result[0].id}`);
+          // await this.analyzeQueue.add('analyze', { articleId: result[0].id });
+          this.logger.log(`⚠️ LLM Analysis skipped for ${result[0].id}`);
         }
       }
 
