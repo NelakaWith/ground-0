@@ -41,7 +41,9 @@ export class ExtractionService {
 
       // 1. Tier 1: Local Readability
       try {
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          signal: AbortSignal.timeout(10000),
+        });
         if (response.ok) {
           const html = await response.text();
           const doc = new JSDOM(html, { url });
