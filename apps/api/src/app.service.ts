@@ -151,7 +151,6 @@ export class AppService implements OnModuleInit {
     const query = this.db
       .select()
       .from(schema.articles)
-      .limit(50)
       .orderBy(desc(schema.articles.pubDate));
 
     if (status) {
