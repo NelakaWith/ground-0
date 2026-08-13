@@ -1,0 +1,6 @@
+$kind: http-request
+name: Delete Articles
+description: ""
+url: http://localhost:3000/api/articles
+method: DELETE
+order: 4468797258350872

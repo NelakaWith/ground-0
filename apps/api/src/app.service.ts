@@ -161,6 +161,16 @@ export class AppService implements OnModuleInit {
   }
 
   /**
+   * Deletes all articles from the database.
+   * Useful for testing and resetting state.
+   */
+  async deleteAllArticles() {
+    this.logger.warn('🗑️ Deleting all articles from the database.');
+    const result = await this.db.delete(schema.articles);
+    return { deleted: true };
+  }
+
+  /**
    * Re-enqueues articles that are missing critical analysis data (backfill).
    */
   async backfillMissingData() {

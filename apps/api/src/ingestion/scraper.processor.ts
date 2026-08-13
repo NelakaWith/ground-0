@@ -12,19 +12,17 @@ import { eq } from 'drizzle-orm';
  * leaving only prose paragraphs before saving to DB.
  */
 function cleanContent(raw: string): string {
-  return raw
+  const cleanedLines = raw
     .split('\n')
     .map((line) =>
       line
-        .replace(/!\[.*?\]\(.*?\)/g, '')
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/!\[.*?\]\(.*?\)/g, '') // Remove images
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links but keep text
         .trim(),
-    )
-    .filter((line) => {
-      if (line.trim().length === 0) return false;
-      return true;
-    })
-    .join('\n');
+    );
+
+  // Join lines back together, then collapse 3 or more newlines into just 2 (a proper paragraph break)
+  return cleanedLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 interface ScrapeJobData {

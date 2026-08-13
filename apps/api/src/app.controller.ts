@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Query } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Query } from '@nestjs/common';
 import { AppService } from './app.service';
 import { NewsDiscoveryService } from './ingestion/news-discovery.service';
 import providers from './feed/providers';
@@ -46,6 +46,11 @@ export class AppController {
   @Get('articles')
   async getArticles(@Query('status') status?: string) {
     return this.appService.getArticles(status);
+  }
+
+  @Delete('articles')
+  async deleteAllArticles() {
+    return this.appService.deleteAllArticles();
   }
 
   @Get('articles/clusters')
