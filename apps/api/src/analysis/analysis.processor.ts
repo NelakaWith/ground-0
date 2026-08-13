@@ -27,34 +27,9 @@ export class AnalysisProcessor extends WorkerHost implements OnModuleInit {
   }
 
   async onModuleInit() {
-    // Only recover jobs that are in 'scraped' status AND haven't been updated in 30 minutes.
-    // This prevents re-enqueuing active jobs on every dev server restart.
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-
-    const pending = await this.db
-      .select({ id: articles.id })
-      .from(articles)
-      .where(
-        and(
-          eq(articles.processingStatus, 'scraped'),
-          lt(articles.updatedAt, thirtyMinutesAgo),
-        ),
-      );
-
-    if (pending.length === 0) return;
-
-    this.logger.log(
-      `Re-queuing ${pending.length} article(s) pending analysis...`,
-    );
-    for (const { id } of pending) {
-      await this.analyzeQueue
-        .add(
-          'analyze',
-          { articleId: id },
-          { jobId: `requeue-${id}`, removeOnComplete: true },
-        )
-        .catch(() => {}); // ignore duplicate jobId errors
-    }
+    // NOTE: Analysis pipeline is intentionally unplugged.
+    // We are skipping the recovery of 'scraped' articles so they don't enter the LLM analysis queue.
+    return;
   }
 
   async process(job: Job<{ articleId: string }>, token?: string): Promise<any> {
@@ -136,8 +111,7 @@ export class AnalysisProcessor extends WorkerHost implements OnModuleInit {
         await job.moveToDelayed(Date.now() + error.retryAfterMs, token);
         throw new DelayedError();
       }
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`🛑 Analysis failed for ${articleId}: ${message}`);
+
       await this.db
         .update(articles)
         .set({ processingStatus: 'failed', updatedAt: new Date() })
@@ -149,7 +123,6 @@ export class AnalysisProcessor extends WorkerHost implements OnModuleInit {
 
   @OnWorkerEvent('failed')
   onFailed(job: Job, error: Error) {
-    this.logger.error(`❌ Job ${job.id} failed: ${error.message}`);
   }
 
   @OnWorkerEvent('completed')

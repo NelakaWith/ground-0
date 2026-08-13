@@ -34,7 +34,6 @@ useHead({
 
 <template>
   <div class="min-h-screen bg-neutral-50 dark:bg-black p-4 md:p-8">
-    <div></div>
     <div class="max-w-7xl mx-auto">
       <!-- Header -->
       <header

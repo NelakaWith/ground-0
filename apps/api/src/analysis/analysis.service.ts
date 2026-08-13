@@ -91,8 +91,6 @@ export class AnalysisService {
       }
     } catch (error) {
       if (error instanceof GroqRateLimitError) throw error;
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`AI Completion Error (${provider}): ${message}`);
       throw error;
     }
   }
@@ -129,8 +127,6 @@ Do NOT include any preamble or extra text. Just the cleaned article or the error
       );
       return content.trim();
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Error in Content Refinement: ${message}`);
       return rawMarkdown; // Fallback to raw if refinement fails
     }
   }
@@ -199,8 +195,6 @@ Output ONLY valid JSON:
       );
       return JSON.parse(content) as ArticleAnalysis;
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Error in Consolidated Analysis Pass: ${message}`);
       throw error;
     }
   }
@@ -225,8 +219,6 @@ Output ONLY valid JSON:
       const result = await model.embedContent(text.substring(0, 10000));
       return result.embedding.values;
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Error generating embedding: ${message}`);
       throw error;
     }
   }
