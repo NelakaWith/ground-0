@@ -7,6 +7,7 @@ interface Article {
   entities: string;
   chargedAdjectives: string;
   fullText: string;
+  url: string;
 }
 
 const {
@@ -82,10 +83,17 @@ useHead({
               <br />
               <small>{{ article.providerId }}</small>
             </template>
-            <p>
+            <div class="whitespace-pre-wrap">
               {{ article.fullText }}
-            </p>
-            <template #footer></template>
+            </div>
+            <template #footer>
+              <a
+                :href="article.url"
+                target="_blank"
+              >
+                Go to source
+              </a>
+            </template>
           </UCard>
         </template>
       </div>
