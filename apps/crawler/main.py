@@ -47,6 +47,7 @@ crawler: Optional[AsyncWebCrawler] = None
 class CrawlRequest(BaseModel):
     """Request schema for crawling"""
     url: str
+    css_selector: Optional[str] = None
     javascript_enabled: bool = True
     wait_until: str = "networkidle"
     timeout: int = 10000
@@ -125,6 +126,7 @@ async def crawl(request: CrawlRequest) -> CrawlResponse:
     try:
         result = await _arun(
             request.url,
+            css_selector=request.css_selector,
             javascript_enabled=request.javascript_enabled,
             wait_until=request.wait_until,
             timeout=request.timeout,

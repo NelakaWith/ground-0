@@ -69,7 +69,10 @@ export class ScraperProcessor extends WorkerHost {
 
     try {
       // Step 1: Perform actual page extraction using tiered service
-      const extraction = await this.extractionService.extractContent(link);
+      const extraction = await this.extractionService.extractContent(
+        link,
+        job.data.providerId,
+      );
       const content = extraction.text;
 
       if (!content) {

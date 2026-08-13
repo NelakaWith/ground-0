@@ -4,6 +4,7 @@ import { ScraperService } from './scraper.service';
 import Bottleneck from 'bottleneck';
 import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
+import { providers } from '../feed/providers';
 
 /**
  * ExtractionService: Handles content retrieval with a fail-over strategy.
@@ -33,6 +34,7 @@ export class ExtractionService {
    */
   async extractContent(
     url: string,
+    providerId?: string,
   ): Promise<{ text: string; type: 'snippet' | 'full' }> {
     this.logger.log(`Queueing extraction for: ${url}`);
 
@@ -69,7 +71,13 @@ export class ExtractionService {
       }
 
       // 2. Tier 2: Crawl4AI
-      const scraped = await this.scraperService.scrapeContent(url);
+      let cssSelector: string | undefined;
+      if (providerId) {
+        const provider = providers.find((p) => p.id === providerId);
+        cssSelector = provider?.articleSelector;
+      }
+
+      const scraped = await this.scraperService.scrapeContent(url, cssSelector);
       if (scraped) {
         return { text: scraped, type: 'full' };
       }

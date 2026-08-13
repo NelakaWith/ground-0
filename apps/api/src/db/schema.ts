@@ -58,6 +58,7 @@ export const providers = pgTable('providers', {
   homepageUrl: text('homepage_url'),
   discoveryType: text('discovery_type').default('rss').notNull(),
   isActive: boolean('is_active').default(true).notNull(),
+  articleSelector: text('article_selector'),
 });
 
 export type Article = typeof articles.$inferSelect;

@@ -16,9 +16,8 @@ export class ScraperService {
    * This is our primary high-fidelity extraction layer.
    *
    * @param url The article URL to scrape.
-   * @returns The extracted markdown content or null if extraction fails.
    */
-  async scrapeContent(url: string): Promise<string | null> {
+  async scrapeContent(url: string, cssSelector?: string): Promise<string | null> {
     this.logger.log(`🐍 Crawl4AI: Starting extraction for ${url}`);
 
     try {
@@ -27,6 +26,7 @@ export class ScraperService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url,
+          css_selector: cssSelector,
           javascript_enabled: true,
           wait_until: 'networkidle',
           timeout: 20000, // Give Crawl4AI enough time to render
