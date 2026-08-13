@@ -67,12 +67,12 @@ async def lifespan(app: FastAPI):
     global crawler
     # Startup
     crawler = AsyncWebCrawler()
-    print("✓ Crawl4AI initialized")
+    print("Crawl4AI initialized")
     yield
     # Shutdown
     if crawler:
         await crawler.close()
-        print("✓ Crawl4AI closed")
+        print("Crawl4AI closed")
 
 
 app = FastAPI(title="Crawl4AI Microservice", version="0.1.0", lifespan=lifespan)

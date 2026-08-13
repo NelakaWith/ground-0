@@ -61,12 +61,12 @@ export const providers: Provider[] = [
     discoveryType: 'rss',
     url: 'https://www.newswire.lk/feed/',
   },
-  {
-    id: 'the-morning-en',
-    name: 'The Morning',
-    discoveryType: 'homepage',
-    url: 'https://www.themorning.lk/',
-  },
+  // {
+  //   id: 'the-morning-en',
+  //   name: 'The Morning',
+  //   discoveryType: 'homepage',
+  //   url: 'https://www.themorning.lk/',
+  // },
 ];
 
 export default providers;

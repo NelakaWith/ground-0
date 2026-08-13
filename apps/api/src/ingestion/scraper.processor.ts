@@ -6,7 +6,6 @@ import { AnalysisService } from '../analysis/analysis.service';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from '../db/schema';
 import { eq } from 'drizzle-orm';
-import { diceCoefficient } from '../utils/similarity.util';
 
 /**
  * Strips markdown noise (nav links, images, short link-only lines),
@@ -22,8 +21,7 @@ function cleanContent(raw: string): string {
         .trim(),
     )
     .filter((line) => {
-      if (line.length < 40) return false;
-      if ((line.match(/https?:\/\//g) || []).length > 1) return false;
+      if (line.trim().length === 0) return false;
       return true;
     })
     .join('\n');
@@ -93,7 +91,7 @@ export class ScraperProcessor extends WorkerHost {
 
       // Step 2: Basic regex refinement to strip noise
       // CAUTION: LLM AI refinement disabled to save DB only without LLM calls.
-      let refinedContent = cleanContent(content);
+      const refinedContent = cleanContent(content);
 
       // Step 3: Update database with refined text
       const result = await this.db

@@ -41,8 +41,9 @@ export class NewsDiscoveryService implements OnModuleInit {
     @Inject('SCRAPE_QUEUE') private readonly scrapeQueue: Queue,
     @Inject('DRIZZLE_DB') private readonly db: NeonHttpDatabase<typeof schema>,
   ) {
-    // Correct CommonJS/ESM interop instantiator for rss-parser.
-    this.parser = new (ParserNS as unknown as { new (): ParserType })();
+    this.parser = new (ParserNS as unknown as { new (opts?: any): ParserType })(
+      { timeout: 10000 },
+    );
   }
 
   /**
@@ -61,14 +62,20 @@ export class NewsDiscoveryService implements OnModuleInit {
             discoveryType: p.discoveryType,
             rssUrl: p.discoveryType === 'rss' ? p.url : null,
             homepageUrl: p.discoveryType === 'homepage' ? p.url : null,
+            isActive: true,
           })
           .onConflictDoUpdate({
             target: schema.providers.id,
             set: {
               name: p.name,
               discoveryType: p.discoveryType,
-              rssUrl: p.discoveryType === 'rss' ? p.url : schema.providers.rssUrl,
-              homepageUrl: p.discoveryType === 'homepage' ? p.url : schema.providers.homepageUrl,
+              rssUrl:
+                p.discoveryType === 'rss' ? p.url : schema.providers.rssUrl,
+              homepageUrl:
+                p.discoveryType === 'homepage'
+                  ? p.url
+                  : schema.providers.homepageUrl,
+              isActive: true,
             },
           });
       }
@@ -205,6 +212,7 @@ export class NewsDiscoveryService implements OnModuleInit {
         const browserParser = new (ParserNS as unknown as {
           new (opts?: any): ParserType;
         })({
+          timeout: 10000,
           headers: {
             'User-Agent':
               'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
