@@ -41,7 +41,21 @@ export class ExtractionService {
     return this.limiter.schedule(async () => {
       this.logger.log(`Attempting extraction for: ${url}`);
 
-      // 1. Tier 1: Local Readability
+      let cssSelector: string | undefined;
+      if (providerId) {
+        const provider = providers.find((p) => p.id === providerId);
+        cssSelector = provider?.articleSelector;
+      }
+
+      // 1. Tier 1: Crawl4AI (High Fidelity with CSS Selector)
+      const scraped = await this.scraperService.scrapeContent(url, cssSelector);
+      if (scraped) {
+        return { text: scraped, type: 'full' };
+      }
+
+      this.logger.warn(`Tier 1 (Crawl4AI) failed for ${url}. Falling back to Readability...`);
+
+      // 2. Tier 2: Local Readability (Fallback heuristic)
       try {
         const response = await fetch(url, {
           signal: AbortSignal.timeout(10000),
@@ -61,25 +75,13 @@ export class ExtractionService {
             article.textContent.length > 500
           ) {
             this.logger.log(
-              `✅ Tier 1 (Readability): Successfully extracted ${article.textContent.length} chars.`,
+              `✅ Tier 2 (Readability): Successfully extracted ${article.textContent.length} chars.`,
             );
             return { text: article.textContent, type: 'full' };
           }
         }
       } catch (e) {
-        this.logger.warn(`Tier 1 (Readability) failed for ${url}: ${e}`);
-      }
-
-      // 2. Tier 2: Crawl4AI
-      let cssSelector: string | undefined;
-      if (providerId) {
-        const provider = providers.find((p) => p.id === providerId);
-        cssSelector = provider?.articleSelector;
-      }
-
-      const scraped = await this.scraperService.scrapeContent(url, cssSelector);
-      if (scraped) {
-        return { text: scraped, type: 'full' };
+        this.logger.warn(`Tier 2 (Readability) failed for ${url}: ${e}`);
       }
 
       // 3. Tier 3: Stagehand (Disabled - No LLM API)

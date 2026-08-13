@@ -20,6 +20,12 @@ try:
 except ImportError:
     _HAS_CONTENT_FILTER = False
 
+try:
+    from crawl4ai.async_configs import CrawlerRunConfig
+    _HAS_RUN_CONFIG = True
+except ImportError:
+    _HAS_RUN_CONFIG = False
+
 load_dotenv()
 
 class _CrawlResult(Protocol):
@@ -98,7 +104,20 @@ async def _arun(url: str, **kwargs: Any) -> _CrawlResult:
     kwargs.setdefault('excluded_tags', ['nav', 'footer', 'header', 'script', 'style', 'noscript', 'form', 'iframe', 'svg'])
     kwargs.setdefault('remove_overlay_elements', True)
     
-    return await crawler.arun(url, **kwargs)  # type: ignore[misc, return-value]
+    if _HAS_RUN_CONFIG:
+        # For Crawl4AI 0.42 / 0.9.x we must pass settings via CrawlerRunConfig
+        css = kwargs.pop('css_selector', None)
+        js = kwargs.pop('javascript_enabled', True)
+        wu = kwargs.pop('wait_until', 'networkidle')
+        config = CrawlerRunConfig(
+            css_selector=css,
+            wait_until=wu,
+            excluded_tags=kwargs.get('excluded_tags'),
+            remove_overlay_elements=kwargs.get('remove_overlay_elements')
+        )
+        return await crawler.arun(url, config=config)
+    else:
+        return await crawler.arun(url, **kwargs)  # type: ignore[misc, return-value]
 
 
 @app.get("/health")
