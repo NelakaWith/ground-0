@@ -143,7 +143,7 @@ export class AppService implements OnModuleInit {
       isIdle,
       message: isIdle
         ? '🏁 All pipelines completed. All found articles have been processed.'
-        : '🏃‍➡️ Pipeline is still active. There are articles waiting to be scraped or analyzed.',
+        : '🏃‍➡️ Pipeline is still active. There are articles waiting to be processed.',
     };
   }
 
@@ -166,7 +166,7 @@ export class AppService implements OnModuleInit {
    */
   async deleteAllArticles() {
     this.logger.warn('🗑️ Deleting all articles from the database.');
-    const result = await this.db.delete(schema.articles);
+    await this.db.delete(schema.articles);
     return { deleted: true };
   }
 

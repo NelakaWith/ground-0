@@ -13,6 +13,7 @@ import { eq } from 'drizzle-orm';
  */
 function cleanContent(raw: string): string {
   const cleanedLines = raw
+    .replace(/<!--[\s\S]*?-->/g, '') // Remove HTML comments
     .split('\n')
     .map((line) =>
       line

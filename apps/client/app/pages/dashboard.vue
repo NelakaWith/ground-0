@@ -18,6 +18,14 @@ const {
   baseURL: 'http://localhost:3000',
 });
 
+const validArticleCount = computed(() => {
+  return (
+    articles.value?.filter((article) => {
+      return article.fullText && article.fullText.trim().length > 0;
+    }).length || 0
+  );
+});
+
 const handleRefresh = async () => {
   await refresh();
 };
@@ -41,10 +49,11 @@ useHead({
         class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8"
       >
         <div>
-          <h1
-            class="text-3xl font-extrabold tracking-tight flex items-center gap-3"
-          >
-            Articles {{ articles?.length }}
+          <h1 class="text-3xl font-extrabold tracking-tight flex flex-col">
+            <span>Articles {{ validArticleCount }}</span>
+            <span class="text-gray-400 text-sm">
+              {{ articles?.length }} Discovered
+            </span>
           </h1>
         </div>
 
@@ -75,6 +84,7 @@ useHead({
           :key="article.id"
         >
           <UCard
+            v-if="article.fullText"
             variant="subtle"
             class="my-4"
           >

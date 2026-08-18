@@ -137,6 +137,18 @@ export class NewsDiscoveryService implements OnModuleInit {
       for (const item of itemsToProcess) {
         if (!item.link || !item.title) continue;
 
+        // --- Step 0: Time Boundary (24 hours) ---
+        if (item.pubDate) {
+          const publishedDate = new Date(item.pubDate);
+          const hoursOld =
+            (Date.now() - publishedDate.getTime()) / (1000 * 60 * 60);
+
+          if (hoursOld > 24) {
+            this.logger.debug(`Skipping old article (>24h): ${item.title}`);
+            continue;
+          }
+        }
+
         // --- Step 1: Near-Duplicate Detection (Fuzzy) ---
         const isDuplicate = this.checkNearDuplicate(item.title);
         if (isDuplicate) {

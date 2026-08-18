@@ -36,10 +36,12 @@ export class ExtractionService {
     url: string,
     providerId?: string,
   ): Promise<{ text: string; type: 'snippet' | 'full' }> {
-    this.logger.log(`Queueing extraction for: ${url}`);
+    // Sanitize the URL to fix stray '%' signs that cause HTTP clients to crash
+    const safeUrl = url.replace(/%(?![0-9a-fA-F]{2})/g, '%25');
+    this.logger.log(`Queueing extraction for: ${safeUrl}`);
 
     return this.limiter.schedule(async () => {
-      this.logger.log(`Attempting extraction for: ${url}`);
+      this.logger.log(`Attempting extraction for: ${safeUrl}`);
 
       let cssSelector: string | undefined;
       if (providerId) {
@@ -48,16 +50,21 @@ export class ExtractionService {
       }
 
       // 1. Tier 1: Crawl4AI (High Fidelity with CSS Selector)
-      const scraped = await this.scraperService.scrapeContent(url, cssSelector);
+      const scraped = await this.scraperService.scrapeContent(
+        safeUrl,
+        cssSelector,
+      );
       if (scraped) {
         return { text: scraped, type: 'full' };
       }
 
-      this.logger.warn(`Tier 1 (Crawl4AI) failed for ${url}. Falling back to Readability...`);
+      this.logger.warn(
+        `Tier 1 (Crawl4AI) failed for ${safeUrl}. Falling back to Readability...`,
+      );
 
       // 2. Tier 2: Local Readability (Fallback heuristic)
       try {
-        const response = await fetch(url, {
+        const response = await fetch(safeUrl, {
           signal: AbortSignal.timeout(10000),
           headers: {
             'User-Agent':
@@ -66,27 +73,35 @@ export class ExtractionService {
         });
         if (response.ok) {
           const html = await response.text();
-          const doc = new JSDOM(html, { url });
+          const doc = new JSDOM(html, { url: safeUrl });
           const reader = new Readability(doc.window.document);
           const article = reader.parse();
-          if (
-            article &&
-            article.textContent &&
-            article.textContent.length > 500
-          ) {
-            this.logger.log(
-              `✅ Tier 2 (Readability): Successfully extracted ${article.textContent.length} chars.`,
-            );
-            return { text: article.textContent, type: 'full' };
+          if (article && article.content) {
+            // Treat HTML source newlines as spaces, then convert tags to real newlines
+            const formattedText = article.content
+              .replace(/\r?\n/g, ' ') // Collapse source code newlines into spaces
+              .replace(/<p[^>]*>/g, '')
+              .replace(/<\/p>/g, '\n\n')
+              .replace(/<br\s*\/?>/gi, '\n')
+              .replace(/<[^>]+>/g, '') // Strip all other HTML tags
+              .replace(/&nbsp;/g, ' ')
+              .trim();
+
+            if (formattedText.length > 500) {
+              this.logger.log(
+                `✅ Tier 2 (Readability): Successfully extracted ${formattedText.length} chars.`,
+              );
+              return { text: formattedText, type: 'full' };
+            }
           }
         }
       } catch (e) {
-        this.logger.warn(`Tier 2 (Readability) failed for ${url}: ${e}`);
+        this.logger.warn(`Tier 2 (Readability) failed for ${safeUrl}: ${e}`);
       }
 
       // 3. Tier 3: Stagehand (Disabled - No LLM API)
-      // this.logger.log(`Falling back to Stagehand for: ${url}`);
-      // const stagehandResult = await this.stagehandService.extractArticle(url);
+      // this.logger.log(`Falling back to Stagehand for: ${safeUrl}`);
+      // const stagehandResult = await this.stagehandService.extractArticle(safeUrl);
       // if (stagehandResult) {
       //   return { text: stagehandResult, type: 'full' };
       // }
