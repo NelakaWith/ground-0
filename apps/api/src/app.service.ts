@@ -147,17 +147,40 @@ export class AppService implements OnModuleInit {
     };
   }
 
-  async getArticles(status?: string) {
-    const query = this.db
+  async getArticles(status?: string, page = 1, limit = 10) {
+    const offset = (page - 1) * limit;
+
+    const dataQuery = this.db
       .select()
       .from(schema.articles)
-      .orderBy(desc(schema.articles.pubDate));
+      .orderBy(desc(schema.articles.pubDate))
+      .limit(limit)
+      .offset(offset);
 
     if (status) {
-      query.where(eq(schema.articles.processingStatus, status));
+      dataQuery.where(eq(schema.articles.processingStatus, status));
     }
 
-    return query;
+    const data = await dataQuery;
+
+    const countQuery = this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(schema.articles);
+
+    if (status) {
+      countQuery.where(eq(schema.articles.processingStatus, status));
+    }
+
+    const totalResult = await countQuery;
+    const total = Number(totalResult[0].count);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   /**

@@ -44,8 +44,14 @@ export class AppController {
   }
 
   @Get('articles')
-  async getArticles(@Query('status') status?: string) {
-    return this.appService.getArticles(status);
+  async getArticles(
+    @Query('status') status?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const p = page ? parseInt(page, 10) : 1;
+    const l = limit ? parseInt(limit, 10) : 10;
+    return this.appService.getArticles(status, p, l);
   }
 
   @Delete('articles')

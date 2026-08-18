@@ -10,17 +10,22 @@ interface Article {
   url: string;
 }
 
+const currentPage = ref(1);
+
 const {
-  data: articles,
+  data: response,
   refresh,
   pending,
-} = await useFetch<Article[]>('/api/articles', {
+} = await useFetch<{ data: Article[]; total: number }>('/api/articles', {
   baseURL: 'http://localhost:3000',
+  query: { page: currentPage, limit: 10 },
 });
+
+const articles = computed(() => response.value?.data || []);
 
 const validArticleCount = computed(() => {
   return (
-    articles.value?.filter((article) => {
+    articles.value.filter((article) => {
       return article.fullText && article.fullText.trim().length > 0;
     }).length || 0
   );
@@ -50,9 +55,9 @@ useHead({
       >
         <div>
           <h1 class="text-3xl font-extrabold tracking-tight flex flex-col">
-            <span>Articles {{ validArticleCount }}</span>
+            <span>Articles {{ validArticleCount }} (This Page)</span>
             <span class="text-gray-400 text-sm">
-              {{ articles?.length }} Discovered
+              {{ response?.total || 0 }} Total Discovered
             </span>
           </h1>
         </div>
@@ -106,6 +111,14 @@ useHead({
             </template>
           </UCard>
         </template>
+      </div>
+
+      <div class="flex justify-center mt-8">
+        <UPagination
+          v-model="currentPage"
+          :page-count="10"
+          :total="response?.total || 0"
+        />
       </div>
     </div>
   </div>
