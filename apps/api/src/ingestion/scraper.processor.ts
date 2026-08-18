@@ -14,11 +14,13 @@ import { eq } from 'drizzle-orm';
 function cleanContent(raw: string): string {
   const cleanedLines = raw
     .replace(/<!--[\s\S]*?-->/g, '') // Remove HTML comments
+    .replace(/<[^>]+>/g, '') // Strip leftover HTML tags
     .split('\n')
     .map((line) =>
       line
         .replace(/!\[.*?\]\(.*?\)/g, '') // Remove images
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links but keep text
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove markdown links but keep text
+        .replace(/https?:\/\/[^\s]+/g, '') // Strip bare URLs
         .trim(),
     );
 

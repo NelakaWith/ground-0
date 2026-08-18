@@ -79,9 +79,10 @@ export class ExtractionService {
           if (article && article.content) {
             // Treat HTML source newlines as spaces, then convert tags to real newlines
             const formattedText = article.content
+              .replace(/<!--[\s\S]*?-->/g, '') // Strip all HTML comments completely first
               .replace(/\r?\n/g, ' ') // Collapse source code newlines into spaces
               .replace(/<p[^>]*>/g, '')
-              .replace(/<\/p>/g, '\n\n')
+              .replace(/<\/(p|div|article|section|h[1-6]|ul|ol|li|blockquote)>/gi, '\n\n')
               .replace(/<br\s*\/?>/gi, '\n')
               .replace(/<[^>]+>/g, '') // Strip all other HTML tags
               .replace(/&nbsp;/g, ' ')

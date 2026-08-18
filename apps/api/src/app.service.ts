@@ -1,7 +1,7 @@
 import { Injectable, Inject, Logger, OnModuleInit } from '@nestjs/common';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as schema from './db/schema';
-import { sql, and, lt, desc, eq, isNull, or } from 'drizzle-orm';
+import { sql, and, lt, desc, eq, isNull, or, isNotNull } from 'drizzle-orm';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 
@@ -153,12 +153,14 @@ export class AppService implements OnModuleInit {
     const dataQuery = this.db
       .select()
       .from(schema.articles)
-      .orderBy(desc(schema.articles.pubDate))
+      .orderBy(desc(schema.articles.createdAt))
       .limit(limit)
       .offset(offset);
 
     if (status) {
       dataQuery.where(eq(schema.articles.processingStatus, status));
+    } else {
+      dataQuery.where(isNotNull(schema.articles.fullText));
     }
 
     const data = await dataQuery;
@@ -169,6 +171,8 @@ export class AppService implements OnModuleInit {
 
     if (status) {
       countQuery.where(eq(schema.articles.processingStatus, status));
+    } else {
+      countQuery.where(isNotNull(schema.articles.fullText));
     }
 
     const totalResult = await countQuery;

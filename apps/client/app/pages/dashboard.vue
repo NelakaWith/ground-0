@@ -12,14 +12,29 @@ interface Article {
 
 const currentPage = ref(1);
 
-const {
-  data: response,
-  refresh,
-  pending,
-} = await useFetch<{ data: Article[]; total: number }>('/api/articles', {
-  baseURL: 'http://localhost:3000',
-  query: { page: currentPage, limit: 10 },
-});
+const response = ref<{ data: Article[]; total: number }>({ data: [], total: 0 });
+const pending = ref(false);
+
+const loadArticles = async () => {
+  pending.value = true;
+  try {
+    const res = await $fetch<{ data: Article[]; total: number }>('/api/articles', {
+      baseURL: 'http://localhost:3000',
+      query: { page: currentPage.value, limit: 10 },
+    });
+    response.value = res;
+  } catch (err) {
+    console.error('Failed to load articles:', err);
+  } finally {
+    pending.value = false;
+  }
+};
+
+await loadArticles();
+
+const handlePageChange = async () => {
+  await loadArticles();
+};
 
 const articles = computed(() => response.value?.data || []);
 
@@ -32,7 +47,7 @@ const validArticleCount = computed(() => {
 });
 
 const handleRefresh = async () => {
-  await refresh();
+  await loadArticles();
 };
 
 useHead({
@@ -118,6 +133,7 @@ useHead({
           v-model="currentPage"
           :page-count="10"
           :total="response?.total || 0"
+          @update:model-value="handlePageChange"
         />
       </div>
     </div>

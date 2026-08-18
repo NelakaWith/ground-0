@@ -1,0 +1,14 @@
+$kind: http-request
+name: Articles
+url: http://localhost:3000/api/articles?page=2&limit=10
+method: GET
+queryParams:
+  - key: page
+    value: "2"
+    disabled: false
+    description: ""
+  - key: limit
+    value: "10"
+    disabled: false
+    description: ""
+order: 4492114461125634
